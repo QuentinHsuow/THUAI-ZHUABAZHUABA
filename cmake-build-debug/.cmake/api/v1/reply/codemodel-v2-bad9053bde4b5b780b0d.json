@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai/cmake-build-debug",
-		"source" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai"
+		"build" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug",
+		"source" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI"
 	},
 	"version" : 
 	{

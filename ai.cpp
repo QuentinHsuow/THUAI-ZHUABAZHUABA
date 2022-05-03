@@ -88,7 +88,7 @@ int weakest_row(IPlayer* player) {
     int* LeftLines = player->Camp->getLeftLines();
     int* stronger_arr = stronger_array(player);
     int min = 10000;
-    int row = 0;
+    int row = -1;
     for (int i = 0; i < 5; ++i) {
         if (LeftLines[i] == 1) {
             if (stronger_arr[i] < min) {
@@ -226,7 +226,7 @@ posAndPri Priority_sunflower(IPlayer* player) {
     int row = -1;
     int p = 0;
 
-    if (turn < 25) {
+    if (turn < 30) {
         for (int i = 0; i < 5; ++i) {
             if(LeftLines[i] == 0) break;
             if (Plants[i][3] == 0) { row = i; col = 3; p = 1300; break; }
@@ -511,7 +511,6 @@ zombie start(IPlayer* player)// 1-25回合手动智能
     }
     return { t, y };
 }
-
 zombie assault(IPlayer* player) {
     int* PlantCD = player->Camp->getPlantCD();
     int row = best_assault(player);

@@ -55,7 +55,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai/cmake-build-debug"
+			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug"
 		},
 		{
 			"name" : "CMAKE_CACHE_MAJOR_VERSION",
@@ -515,7 +515,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai"
+			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI"
 		},
 		{
 			"name" : "CMAKE_INSTALL_NAME_TOOL",
@@ -1078,42 +1078,6 @@
 			"value" : "FALSE"
 		},
 		{
-			"name" : "Project_BINARY_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai/cmake-build-debug"
-		},
-		{
-			"name" : "Project_IS_TOP_LEVEL",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "ON"
-		},
-		{
-			"name" : "Project_SOURCE_DIR",
-			"properties" : 
-			[
-				{
-					"name" : "HELPSTRING",
-					"value" : "Value Computed by CMake"
-				}
-			],
-			"type" : "STATIC",
-			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai"
-		},
-		{
 			"name" : "ai_BINARY_DIR",
 			"properties" : 
 			[
@@ -1123,7 +1087,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai/cmake-build-debug"
+			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug"
 		},
 		{
 			"name" : "ai_IS_TOP_LEVEL",
@@ -1147,7 +1111,7 @@
 				}
 			],
 			"type" : "STATIC",
-			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/FC19_logic/ai/ai"
+			"value" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI"
 		}
 	],
 	"kind" : "cache",
