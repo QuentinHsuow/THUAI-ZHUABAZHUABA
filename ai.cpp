@@ -16,12 +16,10 @@ typedef struct tagPlant {
 /* 僵尸结构体
  * (int) type - 僵尸的类型
  * (int) row - 僵尸所在的行数
- * (int) priority - 僵尸的优先级
  */
 typedef struct tagZombie{
     int type = 0;
     int row = 0;
-    int priority = 0;
 } zombie;
 
 /* ForceCompare
