@@ -222,9 +222,12 @@ void player_ai(IPlayer* player)
 
 int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
 {
+    int* LeftLines = player->Camp->getLeftLines();
     int columns = player->Camp->getColumns();
     int** Plants = player->Camp->getCurrentPlants();
     int*** Zombies = player->Camp->getCurrentZombies();
+
+    if(LeftLines[row] == 0) return 0;
 
     int sum = 0;
     if (isZombie)//计算僵尸的武力值
@@ -426,8 +429,8 @@ plant Plant::SunFlower(IPlayer* player) {
     int** Plants = player->Camp->getCurrentPlants();
     int* LeftLines = player->Camp->getLeftLines();
 
-    int col = -1;
-    int row = -1;
+    int col = 0;
+    int row = 0;
     int p = 0;
 
     if (turn < 30) {
@@ -575,9 +578,14 @@ plant Plant::SmallNut(IPlayer *player) {
         for (int i = 0; i < rows; i++)
         {
             if (LeftLines[i] == 0) continue;
-            if (Zombies[i][j][0] != -1)//如果僵尸攻入了内地
-                if(j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, 1100, 4);
-                else Util::SetPlant(&Boss, i, j, 1100, 4);
+            if (Zombies[i][j][0] != -1) {//如果僵尸攻入了内地
+                if (j > 1 && Plants[i][j - 1] == 0) {
+                    Util::SetPlant(&Boss, i, j - 1, 1100, 4);
+                }
+                else {
+                    Util::SetPlant(&Boss, i, j, 1100, 4);
+                }
+            }
         }
     //场上有巨人僵尸时，不放坚果墙
     if (Boss.priority != 0)
@@ -731,8 +739,8 @@ zombie Zombie::WaveByWave(IPlayer *player)  {
     int turn = player->getTime();
 
     if (turn % 100 == 0) return{ 5, row };
-    if (turn % 100 == 3) return{ 2, row };
-    if (turn % 100 == 5) return { 4, row };
+    if (turn % 100 == 5) return{ 2, row };
+    if (turn % 100 == 10) return { 4, row };
     else return { -1, -1 };
 }
 
