@@ -14,15 +14,15 @@ typedef struct tagPlant {
 } plant;
 
 /* 僵尸结构体
+ * (int) type - 僵尸的类型
  * (int) col - 僵尸所在的列数
  * (int) priority - 僵尸的优先级
- * (int) type - 僵尸的类型
  */
 typedef struct tagZombie{
-    int col;
-    int priority;
-    int type;
-}zombie;
+    int type = 0;
+    int col = 0;
+    int priority = 0;
+} zombie;
 
 /* ForceCompare
  * @brief: 计算战场上实时战斗力的函数
@@ -80,6 +80,7 @@ namespace ForceCompare{
  * 2.isWithoutVM 计算战场上某一行是否有寒冰射手和建国
  * 3.isWithoutVMArray 计算战场上每一行是否有寒冰射手和建国
  * 4.WherePole 计算战场上哪一行有撑杆跳
+ * 5.BestAssault 计算最佳骚扰行数
  */
 namespace BattleField{
     /*************************************************************************
@@ -113,12 +114,21 @@ namespace BattleField{
     【返回值】 -1：没有撑杆跳；[0,4]撑杆跳的行数
      *************************************************************************/
     int WherePole(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 BestAssault
+   【函数功能】 计算最佳骚扰行数
+   【参数】 \
+   【返回值】 最佳的骚扰行数
+    *************************************************************************/
+    int BestAssault(IPlayer *player);
 }
 
 /* Util
  * @brief: 实用小函数
  * 1.SetPlant 将数据值注入结构体
  * 2.GetBestPlant 得到当前最佳植物
+ * 3.GetBestZombie 得到当前最佳僵尸组
  */
 namespace Util{
     /*************************************************************************
@@ -135,9 +145,17 @@ namespace Util{
     【返回值】 最佳植物
      *************************************************************************/
     plant GetBestPlant(IPlayer* player);
+
+    /*************************************************************************
+    【函数名称】 GetBestZombie
+    【函数功能】 得到当前最佳僵尸
+    【参数】 /
+    【返回值】 最佳僵尸
+     *************************************************************************/
+    zombie GetBestZombie(IPlayer* player);
 }
 
-/*
+/* Plant
  * 向日葵：
  * - 前50回合优先度为1300
  * - 前200回合优先度为1200
@@ -167,134 +185,23 @@ namespace Plant{
     plant SmallNut(IPlayer* player);
     plant Pepper(IPlayer* player);
     plant Squash(IPlayer* player);
-    void removePeashooter(IPlayer* player, plant pt);
+    void RemovePeaShooter(IPlayer* player, plant pt);
 }
 
-namespace Zombie{
-
-}
-
-// 给出最佳的骚扰行数
-int best_assault(IPlayer* player) {
-    int* without_arr = withoutWM(player);
-    int* stronger_arr = stronger_array(player);
-    int* LeftLines = player->Camp->getLeftLines();
-    int row = -1;
-    int min = 100000;
-    for (int i = 0; i < 5; ++i) {
-        if (without_arr[i] == 0 && LeftLines[i] == 1) {
-            if (stronger_arr[i] < min) {
-                min = stronger_arr[i];
-                row = i;
-            }
-        }
-    }
-    return row;
-}
-
-
-
-zombie start(IPlayer* player)// 1-25回合手动智能
-{
-    int turn = player->getTime();
-    int* PlantCD = player->Camp->getPlantCD();
-
-    int t = 0;
-    int y = 0;
-    if (turn < 5)
-    {
-        if (PlantCD[1] == 0) { t = 2; y = 0; }
-        else if (PlantCD[0] == 0) { t = 1; y = 1; }
-    }
-    else
-    {
-        if (PlantCD[1] == 0) { t = 2; y = 0; }
-    }
-    return { t, y };
-}
-zombie assault(IPlayer* player) {
-    int* PlantCD = player->Camp->getPlantCD();
-    int row = best_assault(player);
-    if (row != -1 && PlantCD[1] == 0) return{ 2, row };
-    else return { -1, -1 };
-} // 骚扰函数
-
-zombie wait(IPlayer* player) // 100-495不动,550-995回合,1050-1300回合，当植物小于500时，放铁桶，否则什么也不做
-{
-    int turn = player->getTime();
-    int NotBrokenLinesNum = player->getNotBrokenLines();
-    int* PlantCD = player->Camp->getPlantCD();
-    int* LeftLines = player->Camp->getLeftLines();
-    int Sun = player->Camp->getSun();
-
-    int t = -1;
-    int y = -1;
-    for (int i = 0; i < 5; i++)
-    {
-        if(LeftLines[i] == 0) break;
-        if (turn < 495)
-        {
-
-            if (ForceCompare(i, false, player) <= 510)
-            {
-                t = 2;
-                y = i;
-            }
-        }
-        else
-        {
-            if (ForceCompare(i, false, player) <= 2200)
-            {
-                t = 5;
-                y = i;
-            }
-        }
-    }
-    if (PlantCD[y] != 0 || Sun < 300) { t = -1; y = -1; }
-    return { t, y };
-}
-
-/* 一波偷鸡
- * 首先在495回合放一个巨人
- * 然后500回合放一个巨人
- * 然后510回合放一个冰车
+/* Zombie
+ * Start:[1, 25)
+ * Assault:[25, 100)
+ * Wait:[100, 495), [550, 995)
+ * ZombieWave:[495, 550), [995, 1050)
+ * WaveByWave: [1050, 2000]
  */
-zombie zombieWave(IPlayer* player) {
-    int row = weakest_row(player);
-    int turn = player->getTime();
-
-    if (turn % 500 == 495) return{ 5, row };
-    if (turn % 500 == 0) return{ 5, row };
-    if (turn % 500 == 10)return{ 4, row };
-    else return { -1, -1 };
+namespace Zombie {
+    zombie Start(IPlayer *player);
+    zombie Assault(IPlayer *player);
+    zombie Wait(IPlayer *player);
+    zombie ZombieWave(IPlayer *player);
+    zombie WaveByWave(IPlayer *player);
 }
-
-/* wave by wave
- * 在1200回合之后，每100回合冲一大波
- */
-zombie waveByWave(IPlayer* player) {
-    int row = weakest_row(player);
-    int turn = player->getTime();
-
-    if (turn % 100 == 0) return{ 5, row };
-    if (turn % 100 == 3) return{ 2, row };
-    if (turn % 100 == 5) return { 4, row };
-    else return { -1, -1 };
-}
-
-zombie zombie_attack(IPlayer* player) {
-    int turn = player->getTime();
-    if (turn < 25) return start(player);
-    if (turn >= 25 && turn < 100) return assault(player);
-    if (turn >= 100 && turn < 495) return wait(player);
-    if (turn >= 495 && turn < 550) return zombieWave(player);
-    if (turn >= 550 && turn < 995) return wait(player);
-    if (turn >= 995 && turn < 1050) return zombieWave(player);
-    if (turn >= 1050 && turn < 1495) return waveByWave(player);
-    if (turn >= 1495 && turn < 1550) return zombieWave(player);
-    if (turn >= 1550) return waveByWave(player);
-}
-
 
 void player_ai(IPlayer* player)
 {
@@ -303,15 +210,15 @@ void player_ai(IPlayer* player)
 
     if (Type == 0)//植物方
     {
-        PPriAndType pt = get_target(player);
-        removePeashooter(player, pt);
-        if (pt.p.p > 0) player->PlacePlant(pt.type, pt.p.row, pt.p.col);
+        plant pt = Util::GetBestPlant(player);
+        Plant::RemovePeaShooter(player, pt);
+        if (pt.priority > 0) player->PlacePlant(pt.type, pt.row, pt.col);
     }
 
     if (Type == 1)//僵尸方
     {
-        zombie zb = zombie_attack(player);
-        if (zb.type != -1) player->PlaceZombie(zb.type, zb.y);
+        zombie zb = Util::GetBestZombie(player);
+        if (zb.type != -1) player->PlaceZombie(zb.type, zb.col);
     }
 }
 
@@ -454,6 +361,22 @@ int BattleField::WherePole(IPlayer* player){
     }
     return r;
 }
+int BattleField::BestAssault(IPlayer *player) {
+    bool *without_arr = BattleField::isWithoutVMArray(player);
+    int *stronger_arr = ForceCompare::StrongerArray(player);
+    int *LeftLines = player->Camp->getLeftLines();
+    int row = -1;
+    int min = 100000;
+    for (int i = 0; i < 5; ++i) {
+        if (without_arr[i] == 0 && LeftLines[i] == 1) {
+            if (stronger_arr[i] < min) {
+                min = stronger_arr[i];
+                row = i;
+            }
+        }
+    }
+    return row;
+}
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -479,6 +402,18 @@ plant Util::GetBestPlant(IPlayer *player) {
             t = i + 1;
         }
     return best;
+}
+zombie Util::GetBestZombie(IPlayer *player)  {
+    int turn = player->getTime();
+    if (turn < 25) return Zombie::Start(player);
+    if (turn >= 25 && turn < 100) return Zombie::Assault(player);
+    if (turn >= 100 && turn < 495) return Zombie::Wait(player);
+    if (turn >= 495 && turn < 550) return Zombie::ZombieWave(player);
+    if (turn >= 550 && turn < 995) return Zombie::Wait(player);
+    if (turn >= 995 && turn < 1050) return Zombie::ZombieWave(player);
+    if (turn >= 1050 && turn < 1495) return Zombie::WaveByWave(player);
+    if (turn >= 1495 && turn < 1550) return Zombie::ZombieWave(player);
+    if (turn >= 1550) return Zombie::WaveByWave(player);
 }
 plant Plant::SunFlower(IPlayer* player) {
 
@@ -709,9 +644,81 @@ plant Plant::Squash(IPlayer *player){
     if (PlantCD[5] != 0 || Sun < 50) Boss.priority = 0;
     return Boss;
 }
-void Plant::removePeashooter(IPlayer *player, plant pt) {
+void Plant::RemovePeaShooter(IPlayer *player, plant pt) {
     int** Plants = player->Camp->getCurrentPlants();
     if (pt.type == 2 && Plants[pt.row][pt.col] != 2)
         player->removePlant(pt.row, pt.col);
+}
+zombie Zombie::Start(IPlayer *player) {
+    int turn = player->getTime();
+    int* PlantCD = player->Camp->getPlantCD();
+
+    int t = 0;
+    int y = 0;
+    if (turn < 5){
+        if (PlantCD[1] == 0) { t = 2; y = 0; }
+        else if (PlantCD[0] == 0) { t = 1; y = 1; }
+    }
+    else{
+        if (PlantCD[1] == 0) { t = 2; y = 0; }
+    }
+    return { t, y };
+}
+zombie Zombie::Assault(IPlayer *player) {
+    int* PlantCD = player->Camp->getPlantCD();
+    int row = BattleField::BestAssault(player);
+    if (row != -1 && PlantCD[1] == 0) return{ 2, row };
+    else return { -1, -1 };
+}
+zombie Zombie::Wait(IPlayer *player) {
+    int turn = player->getTime();
+    int NotBrokenLinesNum = player->getNotBrokenLines();
+    int* PlantCD = player->Camp->getPlantCD();
+    int* LeftLines = player->Camp->getLeftLines();
+    int Sun = player->Camp->getSun();
+
+    int t = -1;
+    int y = -1;
+    for (int i = 0; i < 5; i++)
+    {
+        if(LeftLines[i] == 0) break;
+        if (turn < 495)
+        {
+
+            if (ForceCompare::ForceCalculation(i, false, player) <= 510)
+            {
+                t = 2;
+                y = i;
+            }
+        }
+        else
+        {
+            if (ForceCompare::ForceCalculation(i, false, player) <= 2200)
+            {
+                t = 5;
+                y = i;
+            }
+        }
+    }
+    if (PlantCD[y] != 0 || Sun < 300) { t = -1; y = -1; }
+    return { t, y };
+}
+zombie Zombie::ZombieWave(IPlayer *player) {
+    int row = ForceCompare::WeakestRow(player);
+    int turn = player->getTime();
+
+    if (turn % 500 == 495) return{ 5, row };
+    if (turn % 500 == 0) return{ 5, row };
+    if (turn % 500 == 10)return{ 4, row };
+    else return { -1, -1 };
+}
+zombie Zombie::WaveByWave(IPlayer *player)  {
+    int row = ForceCompare::WeakestRow(player);
+    int turn = player->getTime();
+
+    if (turn % 100 == 0) return{ 5, row };
+    if (turn % 100 == 3) return{ 2, row };
+    if (turn % 100 == 5) return { 4, row };
+    else return { -1, -1 };
 }
 
