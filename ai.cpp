@@ -15,12 +15,12 @@ typedef struct tagPlant {
 
 /* 僵尸结构体
  * (int) type - 僵尸的类型
- * (int) col - 僵尸所在的列数
+ * (int) row - 僵尸所在的行数
  * (int) priority - 僵尸的优先级
  */
 typedef struct tagZombie{
     int type = 0;
-    int col = 0;
+    int row = 0;
     int priority = 0;
 } zombie;
 
@@ -218,15 +218,20 @@ void player_ai(IPlayer* player)
     if (Type == 1)//僵尸方
     {
         zombie zb = Util::GetBestZombie(player);
-        if (zb.type != -1) player->PlaceZombie(zb.type, zb.col);
+        if (zb.type != -1) player->PlaceZombie(zb.type, zb.row);
     }
 }
 
 int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
 {
+
+    int* LeftLines = player->Camp->getLeftLines();
     int columns = player->Camp->getColumns();
     int** Plants = player->Camp->getCurrentPlants();
     int*** Zombies = player->Camp->getCurrentZombies();
+
+    // 考虑BrokenLines问题
+    if(LeftLines[row] == 0) return 0;
 
     int sum = 0;
     if (isZombie)//计算僵尸的武力值
@@ -590,7 +595,7 @@ plant Plant::SmallNut(IPlayer *player) {
     }
     return Boss;
 }
-plant Plant::Pepper(IPlayer *player){
+plant Plant::Pepper(IPlayer *player) {
 
     int rows = player->Camp->getRows();
     int columns = player->Camp->getColumns();
@@ -609,7 +614,7 @@ plant Plant::Pepper(IPlayer *player){
     if (PlantCD[4] != 0 || Sun < 125) Boss.priority = 0;
     return Boss;
 }
-plant Plant::Squash(IPlayer *player){
+plant Plant::Squash(IPlayer *player) {
 
     int rows = player->Camp->getRows();
     int columns = player->Camp->getColumns();
@@ -649,19 +654,20 @@ void Plant::RemovePeaShooter(IPlayer *player, plant pt) {
     if (pt.type == 2 && Plants[pt.row][pt.col] != 2)
         player->removePlant(pt.row, pt.col);
 }
-zombie Zombie::Start(IPlayer *player) {
+zombie Zombie::Start(IPlayer *player){
+
     int turn = player->getTime();
     int* PlantCD = player->Camp->getPlantCD();
 
-    int t = 0;
-    int y = 0;
+    int t = -1;
+    int y = -1;
     if (turn < 5){
         if (PlantCD[1] == 0) { t = 2; y = 0; }
         else if (PlantCD[0] == 0) { t = 1; y = 1; }
     }
-    else{
-        if (PlantCD[1] == 0) { t = 2; y = 0; }
-    }
+
+    else if (PlantCD[1] == 0) { t = 2; y = 0; }
+
     return { t, y };
 }
 zombie Zombie::Assault(IPlayer *player) {
@@ -672,7 +678,6 @@ zombie Zombie::Assault(IPlayer *player) {
 }
 zombie Zombie::Wait(IPlayer *player) {
     int turn = player->getTime();
-    int NotBrokenLinesNum = player->getNotBrokenLines();
     int* PlantCD = player->Camp->getPlantCD();
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
