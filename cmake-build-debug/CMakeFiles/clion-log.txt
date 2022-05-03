@@ -1,4 +1,4 @@
-/Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/ninja -G Ninja /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI
+/Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/Applications/CLion.app/Contents/bin/ninja/mac/ninja -G Ninja /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI
 -- The C compiler identification is AppleClang 13.1.6.13160021
 -- The CXX compiler identification is AppleClang 13.1.6.13160021
 -- Detecting C compiler ABI info
@@ -13,4 +13,4 @@
 -- Detecting CXX compile features - done
 -- Configuring done
 -- Generating done
--- Build files have been written to: /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug
+-- Build files have been written to: /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug

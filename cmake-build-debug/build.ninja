@@ -39,13 +39,13 @@ include CMakeFiles/rules.ninja
 #############################################
 # Logical path to working directory; prefix for absolute paths.
 
-cmake_ninja_workdir = /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug/
+cmake_ninja_workdir = /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug/
 
 #############################################
 # Utility command for rebuild_cache
 
 build CMakeFiles/rebuild_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug && /Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake --regenerate-during-build -S/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI -B/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug
+  COMMAND = cd /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug && /Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake --regenerate-during-build -S/Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI -B/Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug
   DESC = Running CMake to regenerate build system...
   pool = console
   restat = 1
@@ -57,7 +57,7 @@ build rebuild_cache: phony CMakeFiles/rebuild_cache.util
 # Utility command for edit_cache
 
 build CMakeFiles/edit_cache.util: CUSTOM_COMMAND
-  COMMAND = cd /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug && /Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+  COMMAND = cd /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug && /Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
   DESC = No interactive CMake dialog available...
   restat = 1
 
@@ -72,7 +72,7 @@ build edit_cache: phony CMakeFiles/edit_cache.util
 
 build cmake_object_order_depends_target_ai: phony || CMakeFiles/ai.dir
 
-build CMakeFiles/ai.dir/ai.cpp.o: CXX_COMPILER__ai_Debug /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/ai.cpp || cmake_object_order_depends_target_ai
+build CMakeFiles/ai.dir/ai.cpp.o: CXX_COMPILER__ai_Debug /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/ai.cpp || cmake_object_order_depends_target_ai
   DEP_FILE = CMakeFiles/ai.dir/ai.cpp.o.d
   FLAGS = -g -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk -std=gnu++2a
   OBJECT_DIR = CMakeFiles/ai.dir
@@ -106,7 +106,7 @@ build ai: CXX_EXECUTABLE_LINKER__ai_Debug CMakeFiles/ai.dir/ai.cpp.o
 # =============================================================================
 
 #############################################
-# Folder: /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug
+# Folder: /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug
 
 build all: phony ai
 

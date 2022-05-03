@@ -49,8 +49,8 @@
 	"kind" : "codemodel",
 	"paths" : 
 	{
-		"build" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI/cmake-build-debug",
-		"source" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/thuai/AI"
+		"build" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug",
+		"source" : "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI"
 	},
 	"version" : 
 	{
