@@ -247,7 +247,7 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
                 else if (Zombies[row][i][k] == 2)//铁桶僵尸
                     sum += 820;
                 else if (Zombies[row][i][k] == 3)//撑杆跳僵尸
-                    sum += 200 * 5 / 4.5;//这里是对撑杆僵尸的估算，个人觉得撑杆用处不大，故没有考虑在内
+                    sum += 200 * 10 / 9;//这里是对撑杆僵尸的估算，个人觉得撑杆用处不大，故没有考虑在内
                 else if (Zombies[row][i][k] == 4)//雪橇僵尸
                     sum += 1600 * 5 / 7;
                 else if (Zombies[row][i][k] == 5)//巨人僵尸
@@ -269,6 +269,66 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
         }
     }
     return sum;
+    /* possible changes
+    int sum = 0;
+    int planttmp[3][11] = {0};//临时存储植物的数量和列数，第一个元素代表个数，后面的代表种植该植物的列数
+    int zombietmp[5] = { 0 };//临时存储僵尸的数量
+    for (int i = 0; i < columns; i++)//录入僵尸数量信息
+    {
+        int k = 0;
+        while (Zombies[row][i][k] != -1)
+        {
+            if (Zombies[row][i][k] == 1) zombietmp[0]++;//普通僵尸
+            else if (Zombies[row][i][k] == 2) zombietmp[1]++;//铁桶僵尸
+            else if (Zombies[row][i][k] == 3) zombietmp[2]++;//撑杆跳僵尸
+            else if (Zombies[row][i][k] == 4) zombietmp[3]++;//雪橇僵尸
+            else if (Zombies[row][i][k] == 5) zombietmp[4]++;//巨人僵尸
+            k++;
+        }
+    }
+    for (int j = 0; j < columns; j++)//录入植物数量信息
+    {
+        if (Plants[row][j] == 2)
+        {
+            ++planttmp[0][0];
+            planttmp[0][ (planttmp[0][0]) ] = j;
+        }//冰豌豆
+        if (Plants[row][j] == 3)
+        {
+            ++planttmp[1][0];
+            planttmp[1][ (planttmp[1][0]) ] = j;
+        }//豌豆
+        if (Plants[row][j] == 4)
+        {
+            ++planttmp[2][0];
+            planttmp[2][ (planttmp[2][0]) ] = j;
+        }//坚果墙
+    }
+
+    if (isZombie)//计算僵尸的武力值
+    {
+        sum += 270 * zombietmp[0] + 820 * zombietmp[1] + 200 * 5 / 4.5 * zombietmp[2] +
+            1600 * 5 / 7 * zombietmp[3] + 3000 * zombietmp[4];
+    }
+    else
+    {
+        //豌豆射手
+        for (int i = 1; i <= planttmp[1][0]; i++)
+            sum += planttmp[1][i] * 10 * 5;
+        //坚果墙
+        if (planttmp[2][0] != 0)
+        {
+            if (zombietmp[4] != 0 || zombietmp[3] != 0) sum = 0;//存在巨人或者雪车，坚果就不顶用了
+            //这里本来希望将撑杆的影响考虑进去，但是担心考虑进去后会产生bug，所以暂时不考虑
+            else sum += 530 * planttmp[0][0];
+        }
+        //寒冰射手
+        for (int i = 1; i <= planttmp[0][0]; i++)
+            sum += planttmp[0][i] * 20 * 5;
+        if (planttmp[0][0] != 0) sum *= 2;//如果存在寒冰射手，可以近似认为，植物的能力翻倍了！
+    }
+     */
+
 }
 inline int ForceCompare::StrongerAmount(int row, IPlayer* player) {
     return ForceCalculation(row, false, player) - ForceCalculation(row, true, player);
@@ -279,10 +339,13 @@ int* ForceCompare::StrongerArray(IPlayer* player) {
     return stronger_arr;
 }
 int ForceCompare::WeakestRow(IPlayer* player) {
+
     int* LeftLines = player->Camp->getLeftLines();
     int* stronger_arr = StrongerArray(player);
-    int min = 10000;
+
+    int min = 100000;
     int row = -1;
+
     for (int i = 0; i < 5; ++i) {
         if (LeftLines[i] == 1) {
             if (stronger_arr[i] < min) {
@@ -302,16 +365,20 @@ bool ForceCompare::isPlantStronger(IPlayer* player){
     }
     return isStronger;
 }
-int BattleField::DenseOfZombie(IPlayer* player, int row, int col)
-{
+int BattleField::DenseOfZombie(IPlayer* player, int row, int col){
+
     int*** Zombies = player->Camp->getCurrentZombies();
+    int* LeftLines = player->Camp->getLeftLines();
+
+    if(LeftLines[row] == 0) return 0;
+
     int sum = 0;
     int k = 0;
     while (Zombies[row][col][k] != -1)
     {
         if (Zombies[row][col][k] == 1) sum += 270;
         else if (Zombies[row][col][k] == 2) sum += 820;
-        else if (Zombies[row][col][k] == 3) sum += 200 * 5 / 4.5;
+        else if (Zombies[row][col][k] == 3) sum += 200 * 10 / 9;
         else if (Zombies[row][col][k] == 4) sum += 1600 * 5 / 7;
         else sum += 3000;
         k++;
@@ -324,7 +391,7 @@ bool BattleField::isWithoutWM(IPlayer* player, int row) {
     int cols = player->Camp->getColumns();
     int** Plants = player->Camp->getCurrentPlants();
 
-    if(LeftLines[row] == 1) return false;
+    if(LeftLines[row] == 0) return false;
 
     for(int i = 0; i < cols; ++i){
         if(Plants[row][i] == 2 || Plants[row][i] == 4){
@@ -373,7 +440,7 @@ int BattleField::BestAssault(IPlayer *player) {
     int row = -1;
     int min = 100000;
     for (int i = 0; i < 5; ++i) {
-        if (without_arr[i] == 0 && LeftLines[i] == 1) {
+        if (without_arr[i] && LeftLines[i] == 1) {
             if (stronger_arr[i] < min) {
                 min = stronger_arr[i];
                 row = i;
@@ -390,7 +457,6 @@ void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
     Plant->type = type;
 }
 plant Util::GetBestPlant(IPlayer *player) {
-    int type = player->Camp->getCurrentType();
     plant arr[6];
     arr[0] = Plant::SunFlower(player);
     arr[1] = Plant::WinterPeaShooter(player);
@@ -400,12 +466,11 @@ plant Util::GetBestPlant(IPlayer *player) {
     arr[5] = Plant::Squash(player);
 
     plant best = arr[0];
-    int t = 1;
-    for (int i = 1; i < 6; ++i)
+    for (int i = 1; i < 6; ++i) {
         if (arr[i].priority > best.priority) {
             best = arr[i];
-            t = i + 1;
         }
+    }
     return best;
 }
 zombie Util::GetBestZombie(IPlayer *player)  {
@@ -434,14 +499,14 @@ plant Plant::SunFlower(IPlayer* player) {
 
     if (turn < 30) {
         for (int i = 0; i < 5; ++i) {
-            if(LeftLines[i] == 0) break;
+            if(LeftLines[i] == 0 || ForceCompare::StrongerAmount(i, player) < 0) break;//如果一行产生威胁，就不中种向日葵
             if (Plants[i][3] == 0) { row = i; col = 3; p = 1300; break; }
             if (Plants[i][4] == 0) { row = i; col = 4; p = 1300; break; }
         }
     }
     else if (turn < 200) {
         for (int i = 0; i < 5; ++i) {
-            if(LeftLines[i] == 0) break;
+            if(LeftLines[i] == 0 || ForceCompare::StrongerAmount(i, player) < 0) break;
             if (Plants[i][3] == 0) { row = i; col = 3; p = 1000; break; }
             if (Plants[i][4] == 0) { row = i; col = 4; p = 1000; break; }
         }
@@ -456,7 +521,7 @@ plant Plant::SunFlower(IPlayer* player) {
 
     if (Sun < 50) p = 0;
     if (PlantCD[0] != 0) p = 0;
-    if (col == -1 || row == -1) return { 0, 0, 0 };
+    if (col == -1 || row == -1) return { 0, 0, 0, 1 };
     else return {  row, col, p, 1 };
 
 }
@@ -468,8 +533,8 @@ plant Plant::WinterPeaShooter(IPlayer *player) {
     int* LeftLines = player->Camp->getLeftLines();
 
     int p = 0;
-    int row = 0;
-    int col = 0;
+    int row = -1;
+    int col = -1;
 
     if (!ForceCompare::isPlantStronger(player))//如果阳光比较少，节约一点
     {
@@ -507,6 +572,7 @@ plant Plant::PeaShooter(IPlayer *player) {
     int p = 0;
     int row = 0;
     int col = 0;
+
     if (!ForceCompare::isPlantStronger(player))//如果阳光比较少，节约一点
     {
         p = 1050;
@@ -676,6 +742,7 @@ zombie Zombie::Assault(IPlayer *player) {
     if (row != -1 && PlantCD[1] == 0) return{ 2, row };
     else return { -1, -1 };
 }
+//TODO: 修改wait
 zombie Zombie::Wait(IPlayer *player) {
     int turn = player->getTime();
     int* PlantCD = player->Camp->getPlantCD();
