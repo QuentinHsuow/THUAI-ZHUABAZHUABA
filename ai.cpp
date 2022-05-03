@@ -18,8 +18,8 @@ typedef struct tagPlant {
  * (int) row - 僵尸所在的行数
  */
 typedef struct tagZombie{
-    int type = 0;
-    int row = 0;
+    int type;
+    int row;
 } zombie;
 
 /* ForceCompare
