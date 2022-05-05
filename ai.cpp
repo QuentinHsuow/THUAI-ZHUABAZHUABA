@@ -79,6 +79,7 @@ namespace ForceCompare{
  * 3.isWithoutWinterArray 计算战场上每一行是否有寒冰射手和建国
  * 4.WherePole 计算战场上哪一行有撑杆跳
  * 5.NumTypeArray 计算战场上Type型植物/僵尸的种类
+ * 6.SquashFirstArray
  */
 namespace BattleField{
     /*************************************************************************
@@ -121,6 +122,14 @@ namespace BattleField{
      *************************************************************************/
     int* NumTypeArray(bool isZombie, int type, IPlayer* player);
 
+    /*************************************************************************
+   【函数名称】 SquashFirstArray
+   【函数功能】 判断squash是不是在最前面一行
+   【参数】 \
+   【返回值
+   【修改记录】
+    *************************************************************************/
+    bool* SquashFirstArray(IPlayer* player);
 }
 
 /* Util
@@ -443,6 +452,16 @@ int* BattleField::NumTypeArray(bool isZombie, int type, IPlayer*player){
     }
     return arr;
 }
+bool* BattleField::SquashFirstArray(IPlayer* player){
+    int** Plants = player->Camp->getCurrentPlants();
+    int cols = player->Camp->getColumns();
+    bool* arr = new bool[5];
+    for(int i = 0; i < 5; ++i){
+        if(Plants[i][cols] == 6) arr[i] = true;
+        else arr[i] = false;
+    }
+    return arr;
+}
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -729,15 +748,15 @@ void Plant::RemovePeaShooter(IPlayer *player, plant pt) {
     if(pt.type == 3 && Plants[pt.row][pt.col] == 4)
         player->removePlant(pt.row, pt.col);
 }
-
 int ZombieUtil::BestAssault(IPlayer *player) {
     bool *without_arr = BattleField::isWithoutWinterArray(player);
     int *stronger_arr = ForceCompare::StrongerArray(player);
     int *LeftLines = player->Camp->getLeftLines();
+    bool* squash_arr = BattleField::SquashFirstArray(player);
     int row = -1;
     int min = 100000;
     for (int i = 0; i < 5; ++i) {
-        if (without_arr[i] && LeftLines[i] == 1) {
+        if (without_arr[i] && LeftLines[i] == 1 && !squash_arr[i]) {
             if (stronger_arr[i] < min) {
                 min = stronger_arr[i];
                 row = i;
@@ -852,9 +871,11 @@ zombie Zombie::Start(IPlayer *player){
     return {-1, -1};
 }
 zombie Zombie::Assault(IPlayer *player) {
+    int Sun = player->Camp->getSun();
     int* PlantCD = player->Camp->getPlantCD();
     int row = ZombieUtil::BestAssault(player);
-    if (row != -1 && PlantCD[1] == 0) return{ 2, row };
+    if(Sun > 300 && row != -1) return {5, row};
+    else if (row != -1 && PlantCD[1] == 0) return{ 2, row };
     else return { -1, -1 };
 }
 zombie Zombie::Wait(IPlayer *player) {
