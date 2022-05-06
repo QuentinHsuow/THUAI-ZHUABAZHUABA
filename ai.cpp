@@ -36,6 +36,7 @@ namespace ForceCompare{
     【函数功能】 计算植物/僵尸方的武力总值
     【参数】 row-要比较的行数； isZombie-是不是僵尸；
     【返回值】 返回植物/僵尸方的武力总值
+    【修改记录】 5.6重写了forcecalculation函数，更改了坚果墙和寒冰射手的武力值计算规则
      *************************************************************************/
     int ForceCalculation(int row, bool isZombie, IPlayer* player);
 
@@ -45,7 +46,7 @@ namespace ForceCompare{
     【参数】 row-要比较的行数；
     【返回值】 返回植物武力值与僵尸武力值的差
      *************************************************************************/
-    inline int StrongerAmount(int row, IPlayer* player);
+    int StrongerAmount(int row, IPlayer* player);
 
     /*************************************************************************
     【函数名称】 StrongerArray
@@ -130,6 +131,15 @@ namespace BattleField{
    【修改记录】
     *************************************************************************/
     bool* SquashFirstArray(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 WithoutAttack
+   【函数功能】 返回没有战斗力的行数
+   【参数】 \
+   【返回值】 -1 都有， [0,4]没有的行数
+   【修改记录】5.6添加函数
+    *************************************************************************/
+    int WithoutAttack(IPlayer* player);
 }
 
 /* Util
@@ -169,6 +179,7 @@ namespace Util{
  * - 前50回合优先度为1300
  * - 前200回合优先度为1200
  * - 如果所有植物都强势，那么优先度为1150
+ *【修改记录】5.06 ：1.新增了后期铲除向日葵的机制； 2.将向日葵先种满行再种满列更改为先种满列再种满行
  * 冰豌豆：
  * - 阳光比较少时，防御敌人，优先度为900
  * - 如果植物变得强势，种满三列，优先度为550
@@ -271,51 +282,82 @@ void player_ai(IPlayer* player)
 
 int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
 {
-    int* LeftLines = player->Camp->getLeftLines();
+    int rows = player->Camp->getRows();
     int columns = player->Camp->getColumns();
+    int turn = player->getTime();
+    int BrokenLinesScore = player->getBrokenLinesScore();
+    int NotBrokenLinesNum = player->getNotBrokenLines();
+    int KillPlantsScore = player->getKillPlantsScore();
+    int KillZombiesScore = player->getKillZombiesScore();
+    int LeftPlants = player->getLeftPlants();
+    int Score = player->getScore();
+    int* PlantCD = player->Camp->getPlantCD();
     int** Plants = player->Camp->getCurrentPlants();
     int*** Zombies = player->Camp->getCurrentZombies();
-
-    if(LeftLines[row] == 0) return 0;
+    int* LeftLines = player->Camp->getLeftLines();
+    int Sun = player->Camp->getSun();
 
     int sum = 0;
+    int planttmp[3][11] = { 0 };//临时存储植物的数量和列数，第一个元素代表个数，后面的代表种植该植物的列数
+    int zombietmp[5] = { 0 };//临时存储僵尸的数量
+    for (int i = 0; i < columns; i++)//录入僵尸数量信息
+    {
+        int k = 0;
+        while (Zombies[row][i][k] != -1)
+        {
+            if (Zombies[row][i][k] == 1) zombietmp[0]++;//普通僵尸
+            else if (Zombies[row][i][k] == 2) zombietmp[1]++;//铁桶僵尸
+            else if (Zombies[row][i][k] == 3) zombietmp[2]++;//撑杆跳僵尸
+            else if (Zombies[row][i][k] == 4) zombietmp[3]++;//雪橇僵尸
+            else if (Zombies[row][i][k] == 5) zombietmp[4]++;//巨人僵尸
+            k++;
+        }
+    }
+    for (int j = 0; j < columns; j++)//录入植物数量信息
+    {
+        if (Plants[row][j] == 2)
+        {
+            ++planttmp[0][0];
+            planttmp[0][(planttmp[0][0])] = j;
+        }//冰豌豆
+        if (Plants[row][j] == 3)
+        {
+            ++planttmp[1][0];
+            planttmp[1][(planttmp[1][0])] = j;
+        }//豌豆
+        if (Plants[row][j] == 4)
+        {
+            ++planttmp[2][0];
+            planttmp[2][(planttmp[2][0])] = j;
+        }//坚果墙
+    }
+
     if (isZombie)//计算僵尸的武力值
     {
-        for (int i = 0; i < columns; i++)
-        {
-            int k = 0;
-            while (Zombies[row][i][k] != -1)
-            {
-                //计算武力值时，让武力值和血量、速度成正比
-                if (Zombies[row][i][k] == 1)//普通僵尸
-                    sum += 270;//将普通僵尸作为标杆
-                else if (Zombies[row][i][k] == 2)//铁桶僵尸
-                    sum += 820;
-                else if (Zombies[row][i][k] == 3)//撑杆跳僵尸
-                    sum += 200 * 5 / 4.5;//这里是对撑杆僵尸的估算，个人觉得撑杆用处不大，故没有考虑在内
-                else if (Zombies[row][i][k] == 4)//雪橇僵尸
-                    sum += 1600 * 5 / 7;
-                else if (Zombies[row][i][k] == 5)//巨人僵尸
-                    sum += 3000;
-                k++;
-            }
-        }
+        sum += 270 * zombietmp[0] + 820 * zombietmp[1] + 200 * 5 / 4.5 * zombietmp[2] +
+               1600 * 5 / 7 * zombietmp[3] + 3000 * zombietmp[4];
     }
     else
     {
-        for (int j = 0; j < columns; j++)
+        //豌豆射手
+        for (int i = 1; i <= planttmp[1][0]; i++)
+            sum += ( 10 - planttmp[1][i] ) * 10 * 5;
+        //坚果墙
+        if (planttmp[2][0] != 0 && zombietmp[4] != 0 && zombietmp[3] != 0)//存在巨人或者雪车，坚果就不顶用了
         {
-            if (Plants[row][j] == 2)//冰豌豆
-                sum += (10 - j) * 5 * 40;//普通僵尸走到跟前时造成的总伤害
-            if (Plants[row][j] == 3)//豌豆
-                sum += (10 - j) * 5 * 10;
-            if (Plants[row][j] == 4)//坚果墙
-                sum += 530;//注：此处计算坚果墙武力值为估算，是在只有一个豌豆和一个僵尸情况下估算的
+            int allZombieNum = 0;
+            for (int i = 0; i < 5; i++)
+                allZombieNum += zombietmp[i];// 计算僵尸总量
+            sum += 530 * planttmp[2][0] * (allZombieNum - zombietmp[2]) / allZombieNum;//存在撑杆僵尸，坚果墙将会被削弱
         }
+        //寒冰射手
+        for (int i = 1; i <= planttmp[0][0]; i++)
+            sum +=( 10 - planttmp[0][i] )* 20 * 5;
+        if (planttmp[0][0] != 0) sum *= 2;//如果存在寒冰射手，可以近似认为，植物的能力翻倍了！
     }
     return sum;
 }
-inline int ForceCompare::StrongerAmount(int row, IPlayer* player) {
+int ForceCompare::StrongerAmount(int row, IPlayer* player) {
     return ForceCalculation(row, false, player) - ForceCalculation(row, true, player);
 }
 int* ForceCompare::StrongerArray(IPlayer* player) {
@@ -462,6 +504,8 @@ bool* BattleField::SquashFirstArray(IPlayer* player){
     }
     return arr;
 }
+int BattleField::WithoutAttack(IPlayer *player) {
+}
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -507,38 +551,48 @@ plant Plant::SunFlower(IPlayer* player) {
     int** Plants = player->Camp->getCurrentPlants();
     int* LeftLines = player->Camp->getLeftLines();
 
-    int col = 0;
-    int row = 0;
+    int col = -1;
+    int row = -1;
     int p = 0;
 
     if (turn < 30) {
-        for (int i = 0; i < 5; ++i) {
-            if(LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
-                                    2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
-            if (Plants[i][3] == 0) { row = i; col = 3; p = 1300; break; }
-            if (Plants[i][4] == 0) { row = i; col = 4; p = 1300; break; }
-        }
+        for (int j = 4; j >= 3; --j)
+            for (int i = 0; i < 5; ++i) {
+                if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
+                                         2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
+                if (Plants[i][j] == 0) { row = i; col = j; p = 1300; break; }
+                if (Plants[i][j] == 0) { row = i; col = j; p = 1300; break; }
+            }
     }
     else if (turn < 200 && Sun > 125) {
-        for (int i = 0; i < 5; ++i) {
-            if(LeftLines[i] == 0 || ForceCompare::StrongerAmount(i, player) < 0) continue;
-            if (Plants[i][3] == 0) { row = i; col = 3; p = 1000; break; }
-            if (Plants[i][4] == 0) { row = i; col = 4; p = 1000; break; }
-        }
+        for (int j = 4; j >= 3; --j)
+            for (int i = 0; i < 5; ++i) {
+                if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
+                                         2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
+                if (Plants[i][j] == 0) { row = i; col = j; p = 1000; break; }
+                if (Plants[i][j] == 0) { row = i; col = j; p = 1000; break; }
+            }
     }
-    else if(ForceCompare::isPlantStronger(player)) {
+    else if (ForceCompare::isPlantStronger(player)) {
+        int tmp = 3;
+        int i = 0;
+        for (i = 0; i < 5; i++)
+        {
+            if (LeftLines[i] == 0) continue;
+            if (Plants[i][3] == 2) break;
+        }
+        if (i != 5) tmp = 6;//如果发现第3列开始种寒冰了，将向日葵调整至第6列
         for (int i = 0; i < 5; ++i) {
-            if(LeftLines[i] == 0) continue;
-            if (Plants[i][3] == 0) { row = i; col = 3; p = 1150; break; }
+            if (LeftLines[i] == 0) continue;
             if (Plants[i][4] == 0) { row = i; col = 4; p = 1150; break; }
+            if (Plants[i][tmp] == 0) { row = i; col = tmp; p = 1150; break; }
         }
     }
 
     if (Sun < 50) p = 0;
     if (PlantCD[0] != 0) p = 0;
     if (col == -1 || row == -1) return { 0, 0, 0 };
-    else return {  row, col, p, 1 };
-
+    else return { row, col, p, 1 };
 }
 plant Plant::WinterPeaShooter(IPlayer *player) {
 
@@ -561,10 +615,10 @@ plant Plant::WinterPeaShooter(IPlayer *player) {
     }
     else// 有余力时，摆满三列
     {
-        int tmp[5] = {2, 5, 0, 1, 6};
-        for(int j = 4; j >= 0; j--)
-            for (int i = 0; i < 5; i++){
-                if(LeftLines[i] == 0) continue;
+        int tmp[5] = { 2, 0, 1, 3, 5 };
+        for (int j = 4; j >= 0; j--)
+            for (int i = 0; i < 5; i++) {
+                if (LeftLines[i] == 0) continue;
                 if (Plants[i][tmp[j]] != 2)
                 {
                     row = i;
@@ -583,6 +637,7 @@ plant Plant::PeaShooter(IPlayer *player) {
     int Sun = player->Camp->getSun();
     int** Plants = player->Camp->getCurrentPlants();
     int* LeftLines = player->Camp->getLeftLines();
+    int*** Zombies = player->Camp->getCurrentZombies();
 
     int p = 0;
     int row = 0;
@@ -590,19 +645,25 @@ plant Plant::PeaShooter(IPlayer *player) {
 
     if (!ForceCompare::isPlantStronger(player))//如果阳光比较少，节约一点
     {
-        p = 1050;
-        if (BattleField::WherePole(player) == -1) row = ForceCompare::WeakestRow(player);
-        else row = BattleField::WherePole(player);
+        p = 1150;
+        row = ForceCompare::WeakestRow(player);
         if (Plants[row][0] == 0) col = 0;
         else if (Plants[row][1] == 0) col = 1;
         else col = -1;//没地方种了，以后可以在这里加入铲子
+        //在没有坚果保护的情况下别种豌豆,保证先种坚果
+        int j = 0;
+        for (j = 0; j < 7; j++)
+            if (Zombies[row][j][0] != -1)
+                break;
+        if (j != 7 && ForceCompare::ForceCalculation(row, false, player) == 0)
+            p = 0;
     }
     else// 有余力时，摆满一列
     {
         for (int j = 1; j >= 0; j--)
             for (int i = 0; i < 5; i++)
             {
-                if(LeftLines[i] == 0) continue;
+                if (LeftLines[i] == 0) continue;
                 if (Plants[i][j] == 0 || Plants[i][j] == 4)//铲坚果墙
                 {
                     row = i;
@@ -643,13 +704,12 @@ plant Plant::SmallNut(IPlayer *player) {
     else
     {
         //在战斗后期，自动补齐坚果墙
-        for (int j = columns - 2; j <= columns - 1; j++)
-            for (int i = 0; i < rows; i++)
-            {
-                if (LeftLines[i] == 0) continue;
-                if (Plants[i][j] == 0 && Sun > 450 && LeftLines[i] == 1)//如果有多余阳光，且没有被攻破,则补齐一行坚果墙
-                    Util::SetPlant(&Boss, i, j, 800, 4);
-            }
+        for (int i = 0; i < rows; i++)
+        {
+            if (LeftLines[i] == 0) continue;
+            if (Plants[i][columns - 1] == 0 && Sun > 450 && LeftLines[i] == 1)//如果有多余阳光，且没有被攻破,则补齐一行坚果墙
+                Util::SetPlant(&Boss, i, columns - 1, 800, 4);
+        }
     }
     //被动防御优先
     for (int j = columns - 2; j >= 0; j--)// 从后往前遍历，前面的结果会覆盖后面的结果，从而使得在最前面的僵尸前放置
@@ -657,12 +717,8 @@ plant Plant::SmallNut(IPlayer *player) {
         {
             if (LeftLines[i] == 0) continue;
             if (Zombies[i][j][0] != -1) {//如果僵尸攻入了内地
-                if (j > 1 && Plants[i][j - 1] == 0) {
-                    Util::SetPlant(&Boss, i, j - 1, 1100, 4);
-                }
-                else {
-                    Util::SetPlant(&Boss, i, j, 1100, 4);
-                }
+                if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, 1100, 4);
+                else Util::SetPlant(&Boss, i, j, 1100, 4);
             }
         }
     //场上有巨人僵尸时，不放坚果墙
@@ -686,7 +742,7 @@ plant Plant::Pepper(IPlayer *player){
 
     int rows = player->Camp->getRows();
     int columns = player->Camp->getColumns();
-    int *PlantCD = player->Camp->getPlantCD();
+    int* PlantCD = player->Camp->getPlantCD();
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
     int turn = player->getTime();
@@ -694,13 +750,16 @@ plant Plant::Pepper(IPlayer *player){
     int value = 1600;
     if (turn > 50) value = 1700;//小trick,在比赛开始时，降低使用辣椒的门槛，使得两个铁桶就能触发辣椒
 
-    plant Boss = {0,0,0, 5};
-    for(int i=0;i<rows;i++)
+    plant Boss = { 0,0,0, 5 };
+    for (int i = 0;i < rows;i++)
     {
         if (LeftLines[i] == 0) continue;
+        int ptmp = 1150 + ForceCompare::StrongerAmount(i, player) * 100 / 10000;
+        //优先度调节，如果一格内的僵尸浓度超过总战力值的一半，优先放倭瓜，否则放辣椒
         if (ForceCompare::ForceCalculation(i, true, player) - 1200 > ForceCompare::ForceCalculation(i, false, player)
             || ForceCompare::ForceCalculation(i, true, player) > value)
-            Util::SetPlant(&Boss, i, columns - 1, 1150, 5);//优先级应该较高
+            if(Boss.priority < ptmp)
+                Util::SetPlant(&Boss, i, columns - 1, ptmp, 5);//优先级应该较高
     }
     if (PlantCD[4] != 0 || Sun < 125) Boss.priority = 0;
     //
@@ -710,32 +769,48 @@ plant Plant::Squash(IPlayer *player){
 
     int rows = player->Camp->getRows();
     int columns = player->Camp->getColumns();
-    int *PlantCD = player->Camp->getPlantCD();
+    int* PlantCD = player->Camp->getPlantCD();
     int*** Zombies = player->Camp->getCurrentZombies();
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
+    int turn = player->getTime();
+    int** Plants = player->Camp->getCurrentPlants();
 
-    plant Boss = {0,0,0, 6};
-    for(int i = 0;i < rows;i++)
+    plant Boss = { 0,0,0, 6 };
+    for (int i = 0;i < rows;i++)
     {
         if (LeftLines[i] == 0) continue;
-        for(int j = 0;j < columns;j++)
+        for (int j = 0;j < columns;j++)
         {
-            int k = 0;
-            //砸巨人僵尸
-            while(Zombies[i][j][k] != -1)
-            {
-                if (Zombies[i][j][k] == 5 && Boss.priority < 1500)
-                {
-                    Util::SetPlant(&Boss, i, j, 1500, 6);
-                }//碰到巨人僵尸的优先度,the second highest, only lower than sunflower
-                if (BattleField::DenseOfZombie(player, i, j) > 1200 && ForceCompare::ForceCalculation(i, true, player) > ForceCompare::ForceCalculation(i, false, player) && Boss.priority < 1400)
-                    Util::SetPlant(&Boss, i, j, 1400, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
-                k++;
-            }
+            int ptmp = 1150 + 200 * BattleField::DenseOfZombie(player, i, j) / 10000;//根据战力值来区分优先度
+            int puttmp = 800;//前期使用倭瓜的门槛较低，即一个铁桶就使用
+            if (turn > 200 || ForceCompare::isPlantStronger(player)) puttmp = 1200;
+            if (BattleField::DenseOfZombie(player, i, j) > puttmp
+                && Boss.priority < ptmp)//取最大优先度
+                Util::SetPlant(&Boss, i, j, ptmp, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
             //绝地反击，如果僵尸快打穿了
             if (j == 0 && Zombies[i][0][0] != -1 && Boss.priority < 2000)
                 Util::SetPlant(&Boss, i, 0, 2000, 6);//此地逻辑存疑，待修正
+        }
+    }
+    if (ForceCompare::isPlantStronger(player))//倭瓜长城
+    {
+        int i = 0, j = 0;
+        bool flag = true;
+        for (i = 0; i < 5; i++)
+        {
+            if (LeftLines[i] == 0) continue;
+            for (j = 0; j < 3; j++)
+                if (Plants[i][j] != 2) flag = false;
+        }
+        if (flag)//种了足够多的寒冰射手
+        {
+            for (i = 0; i < 5; i++)
+            {
+                if (LeftLines[i] == 0) continue;
+                if (Plants[i][columns - 2] == 0)
+                    Util::SetPlant(&Boss, i, columns - 2, 500, 6);
+            }
         }
     }
     if (PlantCD[5] != 0 || Sun < 50) Boss.priority = 0;
