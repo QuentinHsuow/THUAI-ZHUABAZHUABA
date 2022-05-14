@@ -87,6 +87,8 @@ namespace ForceCompare{
  * 4.NumZombieArray 计算战场上Type型植物/僵尸的种类
  * 5.NumPlantArray 计算战场上Type型
  * 6.SquashFirstArray
+ * 7.WherePlantType
+ * 8.WhereZombieType
  */
 namespace BattleField{
     /*************************************************************************
@@ -510,7 +512,7 @@ bool* BattleField::SquashFirstArray(IPlayer* player){
     int cols = player->Camp->getColumns();
     bool* arr = new bool[5];
     for(int i = 0; i < 5; ++i){
-        if(Plants[i][cols] == 6) arr[i] = true;
+        if(Plants[i][cols-1] == 6) arr[i] = true;
         else arr[i] = false;
     }
     return arr;
