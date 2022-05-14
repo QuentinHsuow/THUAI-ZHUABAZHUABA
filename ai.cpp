@@ -37,6 +37,7 @@ namespace ForceCompare{
     【参数】 row-要比较的行数； isZombie-是不是僵尸；
     【返回值】 返回植物/僵尸方的武力总值
     【修改记录】 5.6重写了forcecalculation函数，更改了坚果墙和寒冰射手的武力值计算规则
+               5.14OKAY
      *************************************************************************/
     int ForceCalculation(int row, bool isZombie, IPlayer* player);
 
@@ -45,6 +46,7 @@ namespace ForceCompare{
     【函数功能】 计算植物的武力值比僵尸的武力值大多少
     【参数】 row-要比较的行数；
     【返回值】 返回植物武力值与僵尸武力值的差
+             5.14OKAY
      *************************************************************************/
     int StrongerAmount(int row, IPlayer* player);
 
