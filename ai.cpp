@@ -83,8 +83,9 @@ namespace ForceCompare{
  * 1.DenseOfZombie 计算一格内的僵尸有多少
  * 2.isWithoutVM 计算战场上某一行是否有寒冰射手和建国
  * 3.isWithoutWinterArray 计算战场上每一行是否有寒冰射手和建国
- * 4.WherePole 计算战场上哪一行有撑杆跳
- * 5.NumTypeArray 计算战场上Type型植物/僵尸的种类
+ * ~4.WherePole 计算战场上哪一行有撑杆跳
+ * 4.NumZombieArray 计算战场上Type型植物/僵尸的种类
+ * 5.NumPlantArray 计算战场上Type型
  * 6.SquashFirstArray
  */
 namespace BattleField{
@@ -116,22 +117,22 @@ namespace BattleField{
     bool* isWithoutWinterArray(IPlayer* player);
 
     /*************************************************************************
-    【函数名称】 WherePole
-    【函数功能】 计算战场上哪一行有撑杆跳
-    【参数】 \
-    【返回值】 -1：没有撑杆跳；[0,4]撑杆跳的行数
-    【修改记录】 5.14OKAY
+    【函数名称】 NumZombieArray
+    【函数功能】 计算战场上type型僵尸的数量
+    【参数】
+    【返回值】 int[5]
+    【修改记录】 5.14添加
      *************************************************************************/
-    int WherePole(IPlayer* player);
+    int* NumZombieArray(int type, IPlayer* player);
 
     /*************************************************************************
-    【函数名称】 NumTypeArray
-    【函数功能】 计算战场上type型植物/僵尸的数量
-    【参数】 isZombie-true:zombie;false-plant
+    【函数名称】 NumPlantArray
+    【函数功能】 计算战场上type型植物的数量
+    【参数】
     【返回值】 int[5]
-    【修改记录】 5.14OKAY
+    【修改记录】 5.14添加
      *************************************************************************/
-    int* NumTypeArray(bool isZombie, int type, IPlayer* player);
+    int* NumPlantArray(int type, IPlayer* player);
 
     /*************************************************************************
    【函数名称】 SquashFirstArray
@@ -445,63 +446,54 @@ bool* BattleField::isWithoutWinterArray(IPlayer* player){
     }
     return arr;
 }
-int BattleField::WherePole(IPlayer* player) {
-    int columns = player->Camp->getColumns();
-    int ***Zombies = player->Camp->getCurrentZombies();
-    int *LeftLines = player->Camp->getLeftLines();
-    int r = -1;
-    bool flag = false;
-    for (int i = 0; i < 5; i++)//防范撑杆的偷袭
-    {
-        if (LeftLines[i] == 0) continue;
-        for (int j = 0; j < columns; j++) {
-            int k = 0;
-            while (Zombies[i][j][k] != -1) {
-                if (Zombies[i][j][k] == 3 && !flag) {
-                    flag = true;
-                    r = i;
-                }
-                k++;
-            }
-        }
-    }
-    return r;
-}
-int* BattleField::NumTypeArray(bool isZombie, int type, IPlayer*player){
+int* BattleField::NumZombieArray(int type, IPlayer*player){
     int** Plants = player->Camp->getCurrentPlants();
     int*** Zombies = player->Camp->getCurrentZombies();
     int cols = player->Camp->getColumns();
     int* LeftLines = player->Camp->getLeftLines();
     int* arr = new int[5];
 
-    if(isZombie){
-        for(int i = 0; i < 5; ++i){
-            if(LeftLines[i] == 0){
-                arr[i] = 0;
-                continue;
+
+    for(int i = 0; i < 5; ++i){
+
+        if(LeftLines[i] == 0){
+            arr[i] = 0;
+            continue;
+        }
+
+        for(int j = 0; j < cols; j++){
+            int k = 0;
+            while(Zombies[i][j][k] != -1){
+                if(Zombies[i][j][k] == type)  ++arr[i];
+                ++k;
             }
-            for(int j = 0; j < cols; j++){
-                for(int k = 0; Zombies[i][j][k] != -1; k++){
-                    if(Zombies[i][j][k] == type){
-                        arr[i]++;
-                    } // zombieType
-                } // inner-most loop
-            } // col-loop
-        } // row-loop
-    }
-    else{
-        for (int i = 0; i < 5; i++) {
-            if (LeftLines[i] == 0) {
-                arr[i] = 0;
-                continue;
-            }
-            for (int j = 0; j < cols; ++j) {
-                if (Plants[i][j] == type) {
-                    arr[i]++;
-                }
+        } // col-loop
+
+    } // row-loop
+
+    return arr;
+}
+int* BattleField::NumPlantArray(int type, IPlayer *player) {
+    int** Plants = player->Camp->getCurrentPlants();
+    int cols = player->Camp->getColumns();
+    int* LeftLines = player->Camp->getLeftLines();
+    int* arr = new int[5];
+
+    for(int i = 0; i < 5; ++i){
+
+        if(LeftLines[i] == 0){
+            arr[i] = 0;
+            continue;
+        }
+
+        for(int j = 0; i < cols; ++j){
+            if(Plants[i][j] == type){
+                ++arr[i];
             }
         }
-    }
+
+    } // row-loop
+
     return arr;
 }
 bool* BattleField::SquashFirstArray(IPlayer* player){
@@ -886,10 +878,10 @@ bool ZombieUtil::isPost(IPlayer *player) {
 }
 int ZombieUtil::StartBestPosition(bool isNormal, IPlayer *player) {
     int* LeftLines = player->Camp->getLeftLines();
-    int* SunFlowerNum = BattleField::NumTypeArray(false, 1, player);
-    int* PeaNum = BattleField::NumTypeArray(false, 2, player);
-    int* NutNum = BattleField::NumTypeArray(false, 4, player);
-    int* IronNum = BattleField::NumTypeArray(true, 2, player);
+    int* SunFlowerNum = BattleField::NumPlantArray(1, player);
+    int* PeaNum = BattleField::NumPlantArray(2, player);
+    int* NutNum = BattleField::NumPlantArray( 4, player);
+    int* IronNum = BattleField::NumZombieArray( 2, player);
     int max = 0;
     int row = -1;
     if(isNormal){
@@ -939,10 +931,10 @@ int ZombieUtil::StartBestPosition(bool isNormal, IPlayer *player) {
 int ZombieUtil::StartBestPositionPole(IPlayer* player){
     // 如果这一行有一个坚果，并且没有豌豆，则返回pole，考虑向日葵的数量是最多的
     int* LeftLines = player->Camp->getLeftLines();
-    int* SunFlowerNum = BattleField::NumTypeArray(false, 1, player);
-    int* PeaNum = BattleField::NumTypeArray(false, 2, player);
-    int* NutNum = BattleField::NumTypeArray(false, 4, player);
-    int* IronNum = BattleField::NumTypeArray(true, 2, player);
+    int* SunFlowerNum = BattleField::NumPlantArray( 1, player);
+    int* PeaNum = BattleField::NumPlantArray(2, player);
+    int* NutNum = BattleField::NumPlantArray( 4, player);
+    int* IronNum = BattleField::NumZombieArray(2, player);
     int max = 0;
     int row = -1;
 
