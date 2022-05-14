@@ -987,7 +987,7 @@ zombie Zombie::Wait(IPlayer *player) {
         if(Sun > 900 - LeftTurn * 3){
             return {5, row};
         }
-        if(WhereG != -1 && Sun > 600 - LeftTurn * 3) {
+        if(WhereG != -1 && Sun > 650 - LeftTurn * 3) {
             if(PlantCD[4] == 0) return {5,WhereG};
             else return {4, WhereG};
         }
@@ -997,7 +997,7 @@ zombie Zombie::Wait(IPlayer *player) {
         if(Sun > 900 - LeftTurn * 5){
             return {5, row};
         }
-        if(WhereG != -1 && Sun > 600 - LeftTurn * 5){
+        if(WhereG != -1 && Sun > 650 - LeftTurn * 5){
             if(PlantCD[4] == 0) return {5,WhereG};
             else return {4, WhereG};
         }
@@ -1011,7 +1011,7 @@ zombie Zombie::ZombieWave(IPlayer *player) {
     if (turn % 500 == 480) return{ 5, row };
     if (turn % 500 == 495 && Sun > 650) return{ 4, row };
     if (turn % 500 == 5)return{ 5, row };
-    if (turn % 500 >= 20) return {4, row};
+    if (turn % 500 >= 20 && turn % 500 <= 50) return {4, row};
     else return { -1, -1 };
 }
 zombie Zombie::WaveByWave(IPlayer *player)  {
@@ -1025,7 +1025,7 @@ zombie Zombie::WaveByWave(IPlayer *player)  {
     if (turn % 100 == 0) return{ 5, row };
     if (turn % 100 == 15) return{ 4, row };
     if (turn % 100 == 25) return {5, row};
-    if (Sun > 600 - LeftTurn * SunPerStep && (turn % 100) % 15 == 0){
+    if (Sun > 600 - LeftTurn * SunPerStep && turn % 100 > 30){
         if(PlantCD[4] == 0) return {5, row};
         if(PlantCD[3] == 0) return {4, row};
     }
