@@ -144,13 +144,22 @@ namespace BattleField{
     bool* SquashFirstArray(IPlayer* player);
 
     /*************************************************************************
-   【函数名称】 WhereType
-   【函数功能】 返回没有战斗力的行数
+   【函数名称】 WherePlantType
+   【函数功能】
    【参数】 \
    【返回值】 -1 都有， [0,4]没有的行数
-   【修改记录】5.6添加函数
+   【修改记录】5.6添加函数,5.14改成两个函数
     *************************************************************************/
-    int WhereType(bool isZombie, int type, IPlayer* player);
+    int WherePlantType(int type, IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 WhereZombieType
+   【函数功能】
+   【参数】 \
+   【返回值】 -1 都有， [0,4]没有的行数
+   【修改记录】5.6添加函数，5.14改成两个函数
+    *************************************************************************/
+    int WhereZombieType(int type, IPlayer* player);
 }
 
 /* Util
@@ -506,27 +515,38 @@ bool* BattleField::SquashFirstArray(IPlayer* player){
     }
     return arr;
 }
-int BattleField::WhereType(bool isZombie, int type, IPlayer *player) {
-    int* NumType = NumTypeArray(isZombie, type, player);
+int BattleField::WherePlantType(int type, IPlayer *player) {
+    int* NumType = NumPlantArray(type, player);
     int* LeftLines = player->Camp->getLeftLines();
-    int*** Zombie = player->Camp->getCurrentZombies();
     int** Plants = player->Camp->getCurrentPlants();
     int cols = player->Camp->getColumns();
     for(int i = 0; i < 5; ++i){
         if(LeftLines[i] == 0) continue;
-        if(isZombie){
-            for(int j = 0; j < cols; ++j){
-                for(int k = 0; Zombie[i][j][k] != -1; k++){
-                    if(Zombie[i][j][k] == type) return i;
-                }
-            }
-        } // isZombie
-        else{
-            for(int j = 0; j < cols; ++j){
-                if(Plants[i][j] == type) return i;
+
+        for(int j = 0; j < cols; ++j){
+            if(Plants[i][j] == type) return i;
+        }
+    }
+    delete[] NumType;
+    return -1;
+}
+int BattleField::WhereZombieType(int type, IPlayer *player) {
+    int* NumType = NumZombieArray(type, player);
+    int* LeftLines = player->Camp->getLeftLines();
+    int*** Zombies = player->Camp->getCurrentZombies();
+    int cols = player->Camp->getColumns();
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
+
+        for(int j = 0; j < cols; ++j){
+            int k = 0;
+            while(Zombies[i][j][k] != -1){
+                if(Zombies[i][j][k] == type) return i;
+                k++;
             }
         }
     }
+    delete[] NumType;
     return -1;
 }
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
@@ -981,7 +1001,7 @@ zombie Zombie::Wait(IPlayer *player) {
     int* PlantCD = player->Camp->getPlantCD();
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
-    int WhereG = BattleField::WhereType(true, 5, player);
+    int WhereG = BattleField::WhereZombieType( 5, player);
     int row = ForceCompare::WeakestRow(player);
 
     if(turn >= 25 && turn < 480){
