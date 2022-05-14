@@ -6,21 +6,21 @@
  * (int) priority - 植物的优先级
  * (int) type - 植物的类型
  */
-typedef struct tagPlant {
+struct plant {
     int row;
     int col;
     int priority;
     int type;
-} plant;
+};
 
 /* 僵尸结构体
  * (int) type - 僵尸的类型
  * (int) row - 僵尸所在的行数
  */
-typedef struct tagZombie{
+struct zombie{
     int type;
     int row;
-} zombie;
+};
 
 /* ForceCompare
  * @brief: 计算战场上实时战斗力的函数
@@ -46,7 +46,7 @@ namespace ForceCompare{
     【函数功能】 计算植物的武力值比僵尸的武力值大多少
     【参数】 row-要比较的行数；
     【返回值】 返回植物武力值与僵尸武力值的差
-             5.14OKAY
+    【修改记录】 5.14OKAY
      *************************************************************************/
     int StrongerAmount(int row, IPlayer* player);
 
@@ -55,6 +55,7 @@ namespace ForceCompare{
     【函数功能】 计算植物的武力值比僵尸的武力值大多少的数组
     【参数】 /
     【返回值】 返回植物武力值与僵尸武力值的差的数组，arr[i]代表第i行的差值
+    【修改记录】 5.14OKAY
      *************************************************************************/
     int* StrongerArray(IPlayer* player);
 
@@ -63,6 +64,7 @@ namespace ForceCompare{
     【函数功能】 计算僵尸比植物强的最多的一行
     【参数】 /
     【返回值】 返回僵尸比植物强的最多的一行
+    【修改记录】 5.14OKAY
      *************************************************************************/
     int WeakestRow(IPlayer* player);
 
@@ -71,6 +73,7 @@ namespace ForceCompare{
     【函数功能】 判断是不是植物比僵尸强
     【参数】 /
     【返回值】 true:植物比僵尸强；false：植物比僵尸弱
+    【修改记录】 5.14OKAY
      *************************************************************************/
      bool isPlantStronger(IPlayer* player);
 }
@@ -90,14 +93,16 @@ namespace BattleField{
     【函数功能】 计算一格内的僵尸有多少
     【参数】 row-要计算的行； col-要计算的列
     【返回值】 返回row行col列有多少僵尸
+    【修改记录】 5.14OKAY
      *************************************************************************/
     int DenseOfZombie(IPlayer* player, int row, int col);
 
     /*************************************************************************
-    【函数名称】 isWithoutVM
-    【函数功能】 计算战场上某一行是否有寒冰射手和建国
+    【函数名称】 isWithoutWiner
+    【函数功能】 计算战场上某一行是否有寒冰射手
     【参数】 row-要计算的行数
-    【返回值】 true-没有寒冰射手与建国，false-有;如果这一行被攻破，返回false
+    【返回值】 true-没有寒冰射手，false-有;如果这一行被攻破，返回false
+    【修改记录】 5.14OKAY
      *************************************************************************/
     bool isWithoutWinter(IPlayer* player, int row);
 
@@ -106,6 +111,7 @@ namespace BattleField{
     【函数功能】 计算战场上每一行是否有寒冰射手和建国
     【参数】 \
     【返回值】 bool array[5]; true-没有寒冰射手与建国，false-有;如果这一行被攻破，返回false
+    【修改记录】 5.14OKAY
      *************************************************************************/
     bool* isWithoutWinterArray(IPlayer* player);
 
@@ -114,6 +120,7 @@ namespace BattleField{
     【函数功能】 计算战场上哪一行有撑杆跳
     【参数】 \
     【返回值】 -1：没有撑杆跳；[0,4]撑杆跳的行数
+    【修改记录】 5.14OKAY
      *************************************************************************/
     int WherePole(IPlayer* player);
 
@@ -122,6 +129,7 @@ namespace BattleField{
     【函数功能】 计算战场上type型植物/僵尸的数量
     【参数】 isZombie-true:zombie;false-plant
     【返回值】 int[5]
+    【修改记录】 5.14OKAY
      *************************************************************************/
     int* NumTypeArray(bool isZombie, int type, IPlayer* player);
 
@@ -129,7 +137,7 @@ namespace BattleField{
    【函数名称】 SquashFirstArray
    【函数功能】 判断squash是不是在最前面一行
    【参数】 \
-   【返回值
+   【返回值】bool 0-4row; false-without;true-with
    【修改记录】
     *************************************************************************/
     bool* SquashFirstArray(IPlayer* player);
@@ -1004,6 +1012,7 @@ zombie Zombie::Wait(IPlayer *player) {
             else return {4, WhereG};
         }
     }
+    return {-1, -1};
 }
 zombie Zombie::ZombieWave(IPlayer *player) {
     int Sun = player->Camp->getSun();
