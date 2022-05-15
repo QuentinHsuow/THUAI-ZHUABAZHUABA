@@ -595,11 +595,13 @@ bool BattleField::isAnySunflower(IPlayer* player)
 {
     int* LeftLines = player->Camp->getLeftLines();
     int** Plants = player->Camp->getCurrentPlants();
+    int sum = 0;
     for (int i = 0; i < 5; i++)
     {
         if (LeftLines[i] == 0) continue;
         for (int j = 0; j < 10; j++)
-            if (Plants[i][j] == 1) return false;
+            if (Plants[i][j] == 1) sum++;
+        if (sum >= 2) return false;
     }
     return true;
 }
@@ -750,7 +752,6 @@ plant Plant::PeaShooter(IPlayer* player) {
         else if (Plants[row][1] == 0) col = 1;
         else col = -1;//没地方种了，以后可以在这里加入铲子
         //在没有坚果保护的情况下别种豌豆,保证先种坚果
-        /*
         int* arr = ForceCompare::StrongerArray(player);
         int arrRow[5] = { 0, 1, 2, 3, 4 };
         for (int i = 0; i < 4; i++)
@@ -758,7 +759,8 @@ plant Plant::PeaShooter(IPlayer* player) {
             {
                 if (arr[j + 1] < arr[i])
                 {
-                    int tmparr, tmp;
+                    int tmparr = 0;
+                    int tmp = 0;
                     tmparr = arr[i]; arr[i] = arr[i + 1]; arr[i + 1] = tmparr;
                     tmp = arrRow[i + 1]; arrRow[i + 1] = arrRow[i]; arrRow[i] = tmp;
                 }
@@ -770,20 +772,21 @@ plant Plant::PeaShooter(IPlayer* player) {
             for (j = 0; j < 7; j++)
                 if (Zombies[arrRow[i]][j][0] != -1)
                     break;
-            if (j == 7 || ForceCompare::ForceCalculation(row, false, player) != 0)
+            if (j == 7 || ForceCompare::ForceCalculation(i, false, player) != 0)
             {
                 row = arrRow[i];
                 break;
             }
         }
         if (i == 5) p = 0;
-        */
+        /*
         int j = 0;
         for (j = 0; j < 7; j++)
             if (Zombies[row][j][0] != -1)
                 break;
         if (j != 7 && ForceCompare::ForceCalculation(row, false, player) == 0)
             p = 0;
+        */
 
     }
     else// 有余力时，摆满一列
@@ -845,7 +848,7 @@ plant Plant::SmallNut(IPlayer* player) {
         {
             if (LeftLines[i] == 0) continue;
             int ptmp = 1150 - (j - 7) * 5 - ForceCompare::StrongerAmount(i, player) / 50;//种植坚果的比较机制
-            if (Zombies[i][j][0] != -1 && Boss.priority < ptmp) {//如果僵尸攻入了内地
+            if (Zombies[i][j][0] != -1 && Boss.priority < ptmp && Plants[i][j] == 0) {//如果僵尸攻入了内地
                 if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 4);
                 else Util::SetPlant(&Boss, i, j, ptmp, 4);
             }
@@ -1082,11 +1085,10 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
     // 如果这一行有一个坚果，并且没有豌豆，则返回pole，考虑向日葵的数量是最多的
     int turn = player->getTime();
     int* LeftLines = player->Camp->getLeftLines();
-    int* SunFlowerNum = BattleField::NumPlantArray( 1, player);
     int* PeaNum = BattleField::NumPlantArray(3, player);
     int* IronNum = BattleField::NumZombieArray(2, player);
     int* NorNum = BattleField::NumZombieArray(1, player);
-    int max = 0;
+    int* NutNum = BattleField::NumPlantArray(4, player);
     int row = -1;
 
     // 在第四回合的特殊判断
@@ -1095,14 +1097,12 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
             // 跳过空行
             if (LeftLines[i] == 0) continue;
             // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-            if (IronNum[i] == 0 && PeaNum[i] == 0 && NorNum[i] == 0) {
+            if (IronNum[i] == 0 && PeaNum[i] == 0 && NorNum[i] == 0 && NutNum[i] == 0) {
                 // 选出向日葵最多的一行
-                if (SunFlowerNum[i] > max) {
-                    max = SunFlowerNum[i];
-                    row = i;
-                }
+                row = i;
             }
         }
+        if(row == -1) row = 2;
     }//turn == 4
 
     return row;
