@@ -630,9 +630,9 @@ plant Util::GetBestPlant(IPlayer *player) {
 zombie Util::GetBestZombie(IPlayer *player){
     if(ZombieUtil::ifStop(player)) return {-1, -1}; // 放送人头机制
     int turn = player->getTime();
-    if (turn < 25) return Zombie::Start(player);
-    if (turn >= 25 && turn < 480 && !ZombieUtil::isPost(player)) return Zombie::Assault(player);
-    if (turn >= 25 && turn < 480 && ZombieUtil::isPost(player)) return Zombie::Wait(player);
+    if (turn < 100) return Zombie::Start(player);
+    if (turn >= 100 && turn < 480 && !ZombieUtil::isPost(player)) return Zombie::Assault(player);
+    if (turn >= 100 && turn < 480 && ZombieUtil::isPost(player)) return Zombie::Wait(player);
     if (turn >= 480 && turn < 550) return Zombie::ZombieWave(player);
     if (turn >= 550 && turn < 980 && !ZombieUtil::isPost(player)) return Zombie::Assault(player);
     if (turn >= 550 && turn < 980 && ZombieUtil::isPost(player)) return Zombie::Wait(player);
@@ -1075,7 +1075,8 @@ zombie Zombie::Start(IPlayer *player){
     if(turn == 2 && rowBucket != -1) return {2, rowBucket};
     // 然后在向日葵最多并且没有
     if(turn == 3 && rowNormal != -1) return{1, rowNormal};
-    if(turn > 3){
+    if(turn == 4 && rowPole != -1) return{3, rowPole};
+    if(turn > 4){
         if(Sun > 200 && rowPole!= -1) return {3, rowPole};
         if(PlantCD[0] == 0 && rowNormal != -1) return {1, rowNormal};
     }
