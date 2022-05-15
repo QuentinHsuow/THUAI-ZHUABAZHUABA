@@ -89,6 +89,8 @@ namespace ForceCompare{
  * 6.SquashFirstArray
  * 7.WherePlantType
  * 8.WhereZombieType
+ * 9.isPlanttype判断某植物在一行的分布
+ * 10.isAnySunflower 判断是否有向日葵
  */
 namespace BattleField{
     /*************************************************************************
@@ -162,6 +164,24 @@ namespace BattleField{
    【修改记录】5.6添加函数，5.14改成两个函数
     *************************************************************************/
     int WhereZombieType(int type, IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 isPlantType
+   【函数功能】 返回一个长度为11的数组，第一个元素为该植物数量n，之后n个元素为植物放置的位置
+   【参数】 行数row, 植物的种类t, 数组
+   【返回值】 / 返回该植物的数量（为了防止内存泄漏，需要使用前创建一个int[11]数组 ）
+   【修改记录】
+    *************************************************************************/
+    int isPlantType(int row, int t, int arr[11], IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 isAnySunflower
+   【函数功能】 判断是否有向日葵
+   【参数】 /
+   【返回值】 / true-没有向日葵
+   【修改记录】
+    *************************************************************************/
+    bool isAnySunflower(IPlayer* player);
 }
 
 /* Util
@@ -373,7 +393,7 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
     {
         //豌豆射手
         for (int i = 1; i <= planttmp[1][0]; i++)
-            sum += ( 10 - planttmp[1][i] ) * 10 * 5;
+            sum += (10 - planttmp[1][i]) * 10 * 5;
         //坚果墙
         if (planttmp[2][0] != 0 && zombietmp[4] != 0 && zombietmp[3] != 0)//存在巨人或者雪车，坚果就不顶用了
         {
@@ -384,7 +404,7 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
         }
         //寒冰射手
         for (int i = 1; i <= planttmp[0][0]; i++)
-            sum +=( 10 - planttmp[0][i] )* 20 * 5;
+            sum += (10 - planttmp[0][i]) * 20 * 5;
         if (planttmp[0][0] != 0) sum *= 2;//如果存在寒冰射手，可以近似认为，植物的能力翻倍了！
     }
     return sum;
@@ -415,7 +435,7 @@ int ForceCompare::WeakestRow(IPlayer* player) {
     }
     return row;
 }
-bool ForceCompare::isPlantStronger(IPlayer* player){
+bool ForceCompare::isPlantStronger(IPlayer* player) {
     int* LeftLines = player->Camp->getLeftLines();
     bool isStronger = true;
     for (int i = 0; i < 5; ++i) {
@@ -424,12 +444,12 @@ bool ForceCompare::isPlantStronger(IPlayer* player){
     }
     return isStronger;
 }
-int BattleField::DenseOfZombie(IPlayer* player, int row, int col){
+int BattleField::DenseOfZombie(IPlayer* player, int row, int col) {
 
     int*** Zombies = player->Camp->getCurrentZombies();
     int* LeftLines = player->Camp->getLeftLines();
 
-    if(LeftLines[row] == 0) return 0;
+    if (LeftLines[row] == 0) return 0;
 
     int sum = 0;
     int k = 0;
@@ -547,6 +567,32 @@ int BattleField::WhereZombieType(int type, IPlayer *player) {
     }
     delete[] NumType;
     return -1;
+}
+int BattleField::isPlantType(int row, int t, int arr[11], IPlayer* player) {
+    int columns = player->Camp->getColumns();
+    int** Plants = player->Camp->getCurrentPlants();
+
+    for (int i = 0; i < 11; i++)
+        arr[i] = 0;
+    for (int j = 0; j < columns; j++)
+        if (Plants[row][j] == t)
+        {
+            ++arr[0];
+            arr[(arr[0])] = j;
+        }
+    return arr[0];
+}
+bool BattleField::isAnySunflower(IPlayer* player)
+{
+    int* LeftLines = player->Camp->getLeftLines();
+    int** Plants = player->Camp->getCurrentPlants();
+    for (int i = 0; i < 5; i++)
+    {
+        if (LeftLines[i] == 0) continue;
+        for (int j = 0; j < 10; j++)
+            if (Plants[i][j] == 1) return false;
+    }
+    return true;
 }
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
