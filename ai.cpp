@@ -262,20 +262,12 @@ namespace ZombieUtil{
     int BestAssault(IPlayer *player);
 
     /*************************************************************************
-   【函数名称】 isPost
-   【函数功能】 判断是否进入后期
-   【参数】 \
-   【返回值】 判断assault和wait的界限
-   【修改记录】 5.5 通过寒冰射手是否大于BrokenLines-2来判断是否进入后期
-    *************************************************************************/
-    bool isPost(IPlayer* player);
-
-    /*************************************************************************
    【函数名称】 StartBestPositionNormal
    【函数功能】 判断start阶段最佳的放置位点
    【参数】 \
    【返回值】 僵尸放置的行数
-   【修改记录】5.14add
+   【修改记录】5.14增加该函数
+             5.15不能完全看向日葵
     *************************************************************************/
     int StartBestPositionNormal(IPlayer* player);
 
@@ -298,13 +290,31 @@ namespace ZombieUtil{
     int StartBestPositionPole(IPlayer* player);
 
     /*************************************************************************
-   【函数名称】 ifStop
+   【函数名称】 isStageTwo
+   【函数功能】 判断是否进入二阶段
+   【参数】 \
+   【返回值】 判断assault和wait的界限
+   【修改记录】 5.5 通过寒冰射手是否大于BrokenLines-2来判断是否进入后期
+    *************************************************************************/
+    bool isStageTwo(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 isStageThree
+   【函数功能】 判断是否进入三阶段
+   【参数】 \
+   【返回值】 判断assault和wait的界限
+   【修改记录】 5.5 通过寒冰射手是否大于BrokenLines-2来判断是否进入后期
+    *************************************************************************/
+    bool isStageThree(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 isStageFour
    【函数功能】 判断是否停止送人头
    【参数】 \
    【返回值】 false - continue, true - stop
    【修改记录】
     *************************************************************************/
-    bool ifStop (IPlayer* player);
+    bool isStageFour (IPlayer* player);
 }
 
 namespace Zombie {
@@ -630,14 +640,14 @@ plant Util::GetBestPlant(IPlayer *player) {
     return best;
 }
 zombie Util::GetBestZombie(IPlayer *player){
-    if(ZombieUtil::ifStop(player)) return {-1, -1}; // 放送人头机制
+    if(ZombieUtil::isStageFour(player)) return {-1, -1}; // 放送人头机制
     int turn = player->getTime();
     if (turn < 100) return Zombie::Start(player);
-    if (turn >= 100 && turn < 480 && !ZombieUtil::isPost(player)) return Zombie::Assault(player);
-    if (turn >= 100 && turn < 480 && ZombieUtil::isPost(player)) return Zombie::Wait(player);
+    if (turn >= 100 && turn < 480 && !ZombieUtil::isStageTwo(player)) return Zombie::Assault(player);
+    if (turn >= 100 && turn < 480 && ZombieUtil::isStageTwo(player)) return Zombie::Wait(player);
     if (turn >= 480 && turn < 550) return Zombie::ZombieWave(player);
-    if (turn >= 550 && turn < 980 && !ZombieUtil::isPost(player)) return Zombie::Assault(player);
-    if (turn >= 550 && turn < 980 && ZombieUtil::isPost(player)) return Zombie::Wait(player);
+    if (turn >= 550 && turn < 980 && !ZombieUtil::isStageTwo(player)) return Zombie::Assault(player);
+    if (turn >= 550 && turn < 980 && ZombieUtil::isStageTwo(player)) return Zombie::Wait(player);
     if (turn >= 980 && turn < 1050) return Zombie::ZombieWave(player);
     if (turn >= 1050 && turn < 1480) return Zombie::WaveByWave(player);
     if (turn >= 1480 && turn < 1550) return Zombie::ZombieWave(player);
@@ -974,27 +984,35 @@ int ZombieUtil::BestAssault(IPlayer *player) {
     }
     return row;
 }
-bool ZombieUtil::isPost(IPlayer *player) {
-    int** Plants = player->Camp->getCurrentPlants();
-    int* LeftLines = player->Camp->getLeftLines();
+bool ZombieUtil::isStageTwo(IPlayer *player) {
     int LeftLineNumber = player->getNotBrokenLines();
-    int cols = player->Camp->getColumns();
-
-    int WinterNum = 0;
+    int turn = player->getTime();
+    int* NumWinter = BattleField::NumPlantArray(2, player);
+    int greater = 0;
     for(int i = 0; i < 5; ++i){
-        if(LeftLines[i] == 0) continue;
-        WinterNum += !BattleField::isWithoutWinter(player, i);
+        if(NumWinter[i] >= 1) greater++;
     }
-    return WinterNum >= LeftLineNumber-2;
+    return greater >= LeftLineNumber-1;
 }
-bool ZombieUtil::ifStop(IPlayer *player) {
+bool ZombieUtil::isStageThree(IPlayer* player){
+    int LeftLineNumber = player->getNotBrokenLines();
+    int turn = player->getTime();
+    int* NumWinter = BattleField::NumPlantArray(2, player);
+    int greater = 0;
+    for(int i = 0; i < 5; ++i){
+        if(NumWinter[i] >= 3) greater++;
+    }
+    return greater >= LeftLineNumber-2;
+}
+bool ZombieUtil::isStageFour(IPlayer *player) {
+    int LeftLineNumber = player->getNotBrokenLines();
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i){
         if(NumWinter[i] >= 4) greater++;
     }
-    return greater >= 4;
+    return greater >= LeftLineNumber-2;
 }
 int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
     int turn = player->getTime();
@@ -1004,29 +1022,46 @@ int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
     int *NutNum = BattleField::NumPlantArray(4, player);
     int *IronNum = BattleField::NumZombieArray(2, player);
     int* NorNum = BattleField::NumZombieArray(1, player);
+    int* PoleNum = BattleField::NumZombieArray(3, player);
     int max = 0;
     int row = -1;
 
-    if(turn == 3) {
+    if(turn == 10) {
         for (int i = 0; i < 5; ++i) {
-            // 跳过空行
             if (LeftLines[i] == 0) continue;
-            // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-            if (IronNum[i] == 0 && NutNum[i] == 0 && PeaNum[i] == 0) {
-                // 选出向日葵最多的一行
-                if (SunFlowerNum[i] >= max) {
-                    max = SunFlowerNum[i];
-                    row = i;
-                }
+            if(SunFlowerNum[i] != 0) row = i;
+        }
+        if(row == -1){
+            for(int i = 0; i < 5; ++i){
+                if(LeftLines[i] == 0) continue;
+                if(IronNum[i] != 0) row = i;
             }
         }
-    }// turn == 3
+        if(row == -1) {
+            for (int i = 0; i < 5; ++i) {
+                if (LeftLines[i] == 0) continue;
+                if (PoleNum[i] != 0) row = i;
+            }
+        }
+        if(row == -1){
+            for(int i = 0; i < 5; ++i){
+                if(LeftLines[i] == 0) continue;
+                if(NutNum[i] == 0 && PeaNum[i] == 0) row = i;
+            }
+        }
+    } // turn == 10
 
     else{
         for(int i = 0; i < 5; ++i){
             if(LeftLines[i] == 0) continue;
-            if(NutNum[i] <= 1 + NorNum[i]){
-                if(SunFlowerNum[i] == max && NutNum[i] + PeaNum[i] < NutNum[row] + PeaNum[row]){
+            // 如果这一行已经有僵尸，那么就放普僵
+            if(NorNum[i] != 0 || IronNum[i] != 0 || PoleNum[i] != 0) {
+                row = i;
+                break;
+            }
+            // 否则就在没有建国或者没有豌豆并且向日葵最多的地方放普僵
+            if(NutNum[i] == 0 || PeaNum[i] == 0){
+                if(SunFlowerNum[i] == max){
                     max = SunFlowerNum[i];
                     row = i;
                 }
@@ -1052,16 +1087,8 @@ int ZombieUtil::StartBestPositionBucket(IPlayer *player) {
 
     if(turn == 2) {
         for (int i = 0; i < 5; ++i) {
-            // 跳过空行
             if (LeftLines[i] == 0) continue;
-            // 筛选出没有铁桶僵尸的一行
-            if (IronNum[i] == 0 && NutNum[i] == 0 && PeaNum[i] == 0) {
-                // 选出向日葵最多的一行
-                if (SunFlowerNum[i] >= max) {
-                    max = SunFlowerNum[i];
-                    row = i;
-                }
-            }
+            if (SunFlowerNum[i] != 0) row = i;
         }
     }// turn == 2
 
@@ -1076,7 +1103,7 @@ int ZombieUtil::StartBestPositionBucket(IPlayer *player) {
                 max = SunFlowerNum[i];
                 row = i;
             }
-        }
+        } // row-loop
     }
 
     return row;
@@ -1087,23 +1114,20 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
     int* LeftLines = player->Camp->getLeftLines();
     int* PeaNum = BattleField::NumPlantArray(3, player);
     int* IronNum = BattleField::NumZombieArray(2, player);
-    int* NorNum = BattleField::NumZombieArray(1, player);
     int* NutNum = BattleField::NumPlantArray(4, player);
     int row = -1;
 
-    // 在第四回合的特殊判断
-    if(turn == 4) {
+    // 在第三回合的特殊判断
+    if(turn == 3) {
         for (int i = 0; i < 5; ++i) {
             // 跳过空行
             if (LeftLines[i] == 0) continue;
             // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-            if (IronNum[i] == 0 && PeaNum[i] == 0 && NorNum[i] == 0 && NutNum[i] == 0) {
-                // 选出向日葵最多的一行
+            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0){
                 row = i;
             }
         }
-        if(row == -1) row = 2;
-    }//turn == 4
+    }//turn == 3
 
     return row;
 }
@@ -1117,11 +1141,11 @@ zombie Zombie::Start(IPlayer *player){
 
     // 前期的特定操作
     if(turn == 2 && rowBucket != -1) return {2, rowBucket};
-    if(turn == 3 && rowNormal != -1) return{1, rowNormal};
-    if(turn == 4 && rowPole != -1) return{3, rowPole};
+    if(turn == 3 && rowPole != -1) return{3, rowPole};
+    if(turn == 10 && rowNormal != -1) return{1, rowNormal};
 
-    // 从第五回合开始，
-    if(turn > 5){
+    // 从第十回合开始
+    if(turn > 10){
         if(rowBucket != -1 && PlantCD[1] == 0) return {2, rowBucket};
         if(rowNormal != -1 && PlantCD[0] == 0) return {1, rowNormal};
     }
