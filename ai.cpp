@@ -315,6 +315,15 @@ namespace ZombieUtil{
    【修改记录】
     *************************************************************************/
     bool isStageFour (IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 isStageFour
+   【函数功能】 判断是否停止送人头
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+    *************************************************************************/
+    int BestDistribution(IPlayer* player);
 }
 
 namespace Zombie {
@@ -1131,6 +1140,28 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
 
     return row;
 }
+
+int ZombieUtil::BestDistribution(IPlayer *player) {
+    int* GagNum = BattleField::NumZombieArray(5, player);
+    int* SleNum = BattleField::NumZombieArray(4, player);
+    int* WinterNum = BattleField::NumPlantArray(2, player);
+    int ZomNum[5];
+    for(int i = 0; i < 5; ++i) ZomNum[i] = GagNum[i] + SleNum[i];
+
+    int row = -1;
+    int min = 6;
+
+    for(int i = 0; i < 5; ++i){
+        if(ZomNum[i] == 0){
+            if(WinterNum[i] < min){
+                min = WinterNum[i];
+                row = i;
+            }
+        }
+    }
+
+    return row;
+}
 zombie Zombie::Start(IPlayer *player){
     int turn = player->getTime();
     int Sun = player->Camp->getSun();
@@ -1192,13 +1223,23 @@ zombie Zombie::Wait(IPlayer *player) {
 zombie Zombie::ZombieWave(IPlayer *player) {
     int Sun = player->Camp->getSun();
     int row = ForceCompare::WeakestRow(player);
+    int disRow = ZombieUtil::BestDistribution(player);
     int turn = player->getTime();
-
-    if (turn % 500 == 480) return{ 5, row };
-    if (turn % 500 == 495 && Sun > 650) return{ 4, row };
-    if (turn % 500 == 5)return{ 5, row };
-    if (turn % 500 >= 20 && turn % 500 <= 50) return {4, row};
-    else return { -1, -1 };
+    if(ZombieUtil::isStageThree(player)){
+        if (turn % 500 == 480) return{ 5, row };
+        if (turn % 500 == 495 && Sun > 650) return{ 4, row };
+        if (turn % 500 == 5)return{ 5, row };
+        if (turn % 500 >= 20 && turn % 500 <= 50) return {4, row};
+        else return { -1, -1 };
+    }
+    else{
+        if (turn % 500 == 490) return {5, row};
+        if (turn % 500 == 495 && Sun > 350) return {4,row};
+        if (turn % 500 == 500) return {5, disRow};
+        if (turn % 500 == 510)  return {4, row};
+        if (turn % 500 >= 20 && turn % 500 <= 50) return {5, row};
+        else return {-1, -1};
+    }
 }
 zombie Zombie::WaveByWave(IPlayer *player)  {
     int* PlantCD = player->Camp->getPlantCD();
