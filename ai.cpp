@@ -289,13 +289,22 @@ namespace ZombieUtil{
     int StartBestPositionBucket(IPlayer* player);
 
     /*************************************************************************
-   【函数名称】 StartBestPositionPoleIf
+   【函数名称】 StartBestPositionPole
    【函数功能】 判断start阶段是不是最好放置Pole
    【参数】 \
    【返回值】 -1 不应该放置pole， [0,4]放置pole的行数
    【修改记录】5.14 change name
     *************************************************************************/
     int StartBestPositionPole(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 ifStop
+   【函数功能】 判断是否停止送人头
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+    *************************************************************************/
+    bool ifStop (IPlayer* player);
 }
 
 namespace Zombie {
@@ -619,6 +628,7 @@ plant Util::GetBestPlant(IPlayer *player) {
     return best;
 }
 zombie Util::GetBestZombie(IPlayer *player){
+    if(ZombieUtil::ifStop(player)) return {-1, -1}; // 放送人头机制
     int turn = player->getTime();
     if (turn < 25) return Zombie::Start(player);
     if (turn >= 25 && turn < 480 && !ZombieUtil::isPost(player)) return Zombie::Assault(player);
@@ -1044,6 +1054,15 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
         }
     }
     return row;
+}
+bool ZombieUtil::ifStop(IPlayer *player) {
+    int turn = player->getTime();
+    int* NumWinter = BattleField::NumPlantArray(2, player);
+    int greater = 0;
+    for(int i = 0; i < 5; ++i){
+        if(NumWinter[i] >= 4) greater++;
+    }
+    return greater >= 4;
 }
 zombie Zombie::Start(IPlayer *player){
     int turn = player->getTime();
