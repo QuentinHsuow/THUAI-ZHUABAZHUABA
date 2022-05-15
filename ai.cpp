@@ -275,7 +275,7 @@ namespace ZombieUtil{
    【返回值】 -1 不应该放置pole， [0,4]放置pole的行数
    【修改记录】5.14 change name
     *************************************************************************/
-    int StartBestPositionPoleIf(IPlayer* player);
+    int StartBestPositionPole(IPlayer* player);
 }
 
 namespace Zombie {
@@ -476,20 +476,20 @@ int* BattleField::NumZombieArray(int type, IPlayer*player){
 
     for(int i = 0; i < 5; ++i){
 
-        if(LeftLines[i] == 0){
-            arr[i] = 0;
-            continue;
-        }
+        if(LeftLines[i] == 0) continue;
 
         for(int j = 0; j < cols; j++){
             int k = 0;
             while(Zombies[i][j][k] != -1){
-                if(Zombies[i][j][k] == type)  ++arr[i];
+                if(Zombies[i][j][k] == type){
+                    arr[i]++;
+                }
                 ++k;
             }
         } // col-loop
 
     } // row-loop
+
 
     return arr;
 }
@@ -502,14 +502,11 @@ int* BattleField::NumPlantArray(int type, IPlayer *player) {
 
     for(int i = 0; i < 5; ++i){
 
-        if(LeftLines[i] == 0){
-            arr[i] = 0;
-            continue;
-        }
+        if(LeftLines[i] == 0) continue;
 
-        for(int j = 0; i < cols; ++j){
+        for(int j = 0; j < cols; ++j){
             if(Plants[i][j] == type){
-                ++arr[i];
+                arr[i]++;
             }
         }
 
@@ -946,7 +943,7 @@ int ZombieUtil::StartBestPositionBucket(IPlayer *player) {
     }
     return row;
 }
-int ZombieUtil::StartBestPositionPoleIf(IPlayer* player){
+int ZombieUtil::StartBestPositionPole(IPlayer* player){
     // 如果这一行有一个坚果，并且没有豌豆，则返回pole，考虑向日葵的数量是最多的
     int* LeftLines = player->Camp->getLeftLines();
     int* SunFlowerNum = BattleField::NumPlantArray( 1, player);
@@ -960,7 +957,7 @@ int ZombieUtil::StartBestPositionPoleIf(IPlayer* player){
         // 跳过空行
         if (LeftLines[i] == 0) continue;
         // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-        else if (IronNum[i] == 0 && NutNum[i] == 1 && PeaNum[i] == 0) {
+        if (IronNum[i] == 0 && NutNum[i] == 1 && PeaNum[i] == 0) {
             // 选出向日葵最多的一行
             if (SunFlowerNum[i] > max) {
                 max = SunFlowerNum[i];
@@ -976,12 +973,13 @@ zombie Zombie::Start(IPlayer *player){
     int* PlantCD = player->Camp->getPlantCD();
     int rowNormal = ZombieUtil::StartBestPositionNormal(player);
     int rowBucket = ZombieUtil::StartBestPositionBucket(player);
+    int rowPole = ZombieUtil::StartBestPositionPole(player);
     // 首先在第二回合的时候在向日葵最多的地方放置一个铁桶僵尸
     if(turn == 2 && rowBucket != -1) return {2, rowBucket};
     // 然后在向日葵最多并且没有
     if(turn == 3 && rowNormal != -1) return{1, rowNormal};
     if(turn > 3){
-        if(Sun > 200 && ZombieUtil::StartBestPositionPoleIf(player)!= -1) return {3, ZombieUtil::StartBestPositionPoleIf(player)};
+        if(Sun > 200 && rowPole!= -1) return {3, rowPole};
         if(PlantCD[0] == 0 && rowNormal != -1) return {1, rowNormal};
     }
     return {-1, -1};

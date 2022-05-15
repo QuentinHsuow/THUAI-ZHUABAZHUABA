@@ -1,4 +1,4 @@
-# Install script for directory: /Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI
+# Install script for directory: /Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/AI
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Algorithm/MyCoursera/Algorithms/Programs_Algorithms/AI/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/Users/apple/Documents/Study/COMPUTER_SCIENCE/Projects/AI/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
