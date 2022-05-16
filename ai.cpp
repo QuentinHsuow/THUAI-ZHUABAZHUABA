@@ -290,6 +290,35 @@ namespace ZombieUtil{
     int StartBestPositionPole(IPlayer* player);
 
     /*************************************************************************
+   【函数名称】 isStageFour
+   【函数功能】 判断是否停止送人头
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+    *************************************************************************/
+    int BestDistribution(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】
+   【函数功能】 判断是否停止送人头
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+   *************************************************************************/
+    int AssaultAvoidSquash(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】
+   【函数功能】 返回作为僵尸方剩余植物的行数
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+   *************************************************************************/
+    int getLeftLineNumZom(IPlayer* player);
+}
+
+namespace ZombieStage{
+    /*************************************************************************
    【函数名称】 isStageOne
    【函数功能】 判断是否进入二阶段
    【参数】 \
@@ -324,33 +353,6 @@ namespace ZombieUtil{
    【修改记录】
     *************************************************************************/
     bool isStageFour (IPlayer* player);
-
-    /*************************************************************************
-   【函数名称】 isStageFour
-   【函数功能】 判断是否停止送人头
-   【参数】 \
-   【返回值】 false - continue, true - stop
-   【修改记录】
-    *************************************************************************/
-    int BestDistribution(IPlayer* player);
-
-    /*************************************************************************
-   【函数名称】
-   【函数功能】 判断是否停止送人头
-   【参数】 \
-   【返回值】 false - continue, true - stop
-   【修改记录】
-   *************************************************************************/
-    int AssaultAvoidSquash(IPlayer* player);
-
-    /*************************************************************************
-   【函数名称】
-   【函数功能】 返回作为僵尸方剩余植物的行数
-   【参数】 \
-   【返回值】 false - continue, true - stop
-   【修改记录】
-   *************************************************************************/
-    int getLeftLineNumZom(IPlayer* player);
 }
 
 namespace Zombie {
@@ -677,19 +679,9 @@ plant Util::GetBestPlant(IPlayer *player) {
     return best;
 }
 zombie Util::GetBestZombie(IPlayer *player){
-    if(ZombieUtil::isStageFour(player)) return {-1, -1}; // 放送人头机制
-    int turn = player->getTime();
-    if (!ZombieUtil::isStageOne(player)) return Zombie::Start(player);
-    if (turn < 480 && !ZombieUtil::isStageTwo(player)) return Zombie::Assault(player);
-    if (turn < 480 && ZombieUtil::isStageTwo(player)) return Zombie::Wait(player);
-    if (turn >= 480 && turn < 550) return Zombie::ZombieWave(player);
-    if (turn >= 550 && turn < 980 && !ZombieUtil::isStageTwo(player)) return Zombie::Assault(player);
-    if (turn >= 550 && turn < 980 && ZombieUtil::isStageTwo(player)) return Zombie::Wait(player);
-    if (turn >= 980 && turn < 1050) return Zombie::ZombieWave(player);
-    if (turn >= 1050 && turn < 1480) return Zombie::WaveByWave(player);
-    if (turn >= 1480 && turn < 1550) return Zombie::ZombieWave(player);
-    if (turn >= 1550) return Zombie::WaveByWave(player);
-    else return {-1, -1};
+    if(!ZombieStage::isStageOne(player)) Zombie::Start(player);
+    else if(ZombieStage::isStageOne(player) && !ZombieStage::isStageTwo(player)) Zombie::Assault(player);
+
 }
 plant Plant::SunFlower(IPlayer* player) {
 
@@ -1043,8 +1035,9 @@ int ZombieUtil::BestAssault(IPlayer *player) {
     }
     return row;
 }
-bool ZombieUtil::isStageOne(IPlayer *player) {
-    int LeftLineNumber = getLeftLineNumZom(player);
+bool ZombieStage::isStageOne(IPlayer *player) {
+    // 有LeftLine-1行都有豌豆了
+    int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int* LeftLines = player->Camp->getLeftLines();
     int* NumPea = BattleField::NumPlantArray(3, player);
     int* NumWinter = BattleField::NumPlantArray(2, player);
@@ -1053,10 +1046,11 @@ bool ZombieUtil::isStageOne(IPlayer *player) {
         if(LeftLines[i] == 0) continue;
         if(NumPea[i] != 0 || NumWinter[i] != 0) greater++;
     }
-    return greater >= LeftLineNumber;
+    return greater >= LeftLineNumber - 1;
 }
-bool ZombieUtil::isStageTwo(IPlayer *player) {
-    int LeftLineNumber = getLeftLineNumZom(player);
+bool ZombieStage::isStageTwo(IPlayer *player) {
+    // 有LeftLine-1行都有一个寒冰或者两个豌豆了
+    int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int* NumPea = BattleField::NumPlantArray(3, player);
@@ -1064,25 +1058,25 @@ bool ZombieUtil::isStageTwo(IPlayer *player) {
     for(int i = 0; i < 5; ++i){
         if(NumWinter[i] >= 1 || NumPea[i] >= 2) greater++;
     }
-    return greater >= LeftLineNumber;
+    return greater >= LeftLineNumber-1;
 }
-bool ZombieUtil::isStageThree(IPlayer* player){
-    int LeftLineNumber = getLeftLineNumZom(player);
+bool ZombieStage::isStageThree(IPlayer* player){
+    // 有LeftLine-1行都有2个寒冰了
+    int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
-    for(int i = 0; i < 5; ++i){
-        if(NumWinter[i] >= 3) greater++;
-    }
-    return greater >= LeftLineNumber-2;
+    for(int i = 0; i < 5; ++i)
+        if(NumWinter[i] >= 2) greater++;
+    return greater >= LeftLineNumber-1;
 }
-bool ZombieUtil::isStageFour(IPlayer *player) {
-    int LeftLineNumber = getLeftLineNumZom(player);
+bool ZombieStage::isStageFour(IPlayer *player) {
+    // 有LeftLine行都有3个寒冰了
+    int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i)
-        if(NumWinter[i] >= 4) greater++;
-
+        if(NumWinter[i] >= 3) greater++;
     return greater >= LeftLineNumber;
 }
 int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
@@ -1314,7 +1308,7 @@ zombie Zombie::ZombieWave(IPlayer *player) {
     int row = ForceCompare::WeakestRow(player);
     int disRow = ZombieUtil::BestDistribution(player);
     int turn = player->getTime();
-    if(ZombieUtil::isStageThree(player)){
+    if(ZombieStage::isStageThree(player)){
         if (turn % 500 == 480) return{ 5, row };
         if (turn % 500 == 495 && Sun > 650) return{ 4, row };
         if (turn % 500 == 5)return{ 5, row };
@@ -1339,7 +1333,7 @@ zombie Zombie::WaveByWave(IPlayer *player)  {
     int LeftTurn = 100 - turn % 100;
     int SunPerStep = turn / 200 + 1;
 
-    if(!ZombieUtil::isStageThree(player)) {
+    if(!ZombieStage::isStageThree(player)) {
         if (turn % 100 == 0) return {5, row};
         if (turn % 100 == 15) return {4, row};
         if (turn % 100 == 25) return {5, row};
