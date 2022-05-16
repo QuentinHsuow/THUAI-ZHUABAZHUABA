@@ -1071,7 +1071,7 @@ bool ZombieUtil::isStageFour(IPlayer *player) {
     for(int i = 0; i < 5; ++i){
         if(NumWinter[i] >= 4) greater++;
     }
-    return greater >= LeftLineNumber-1;
+    return greater >= LeftLineNumber;
 }
 int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
     int turn = player->getTime();
