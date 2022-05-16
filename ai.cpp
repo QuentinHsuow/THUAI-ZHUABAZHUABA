@@ -366,7 +366,8 @@ namespace Zombie {
     zombie Start(IPlayer *player);
     zombie Assault(IPlayer *player);
     zombie Wait(IPlayer *player);
-    zombie ZombieWave(IPlayer *player);
+    zombie ZombieWave2(IPlayer *player);
+    zombie ZombieWave3(IPlayer* player);
     zombie WaveByWave(IPlayer *player);
 }
 
@@ -679,9 +680,27 @@ plant Util::GetBestPlant(IPlayer *player) {
     return best;
 }
 zombie Util::GetBestZombie(IPlayer *player){
-    if(!ZombieStage::isStageOne(player)) Zombie::Start(player);
-    else if(ZombieStage::isStageOne(player) && !ZombieStage::isStageTwo(player)) Zombie::Assault(player);
-
+    int turn = player->getTime();
+    if(turn < 480) {
+        if (!ZombieStage::isStageOne(player)) return Zombie::Start(player);
+        else if (ZombieStage::isStageOne(player) && !ZombieStage::isStageTwo(player)) return Zombie::Assault(player);
+        else if (ZombieStage::isStageTwo(player)) return Zombie::Wait(player);
+    }
+    else if((turn >= 480 && turn < 550) || (turn >= 980 && turn < 1050) || (turn >= 1480 && turn < 1550)){
+        if(!ZombieStage::isStageThree(player)) return Zombie::ZombieWave2(player);
+        else if(ZombieStage::isStageThree(player) && !ZombieStage::isStageFour(player)) return Zombie::ZombieWave3(player);
+        else if(ZombieStage::isStageFour(player)) return {-1, -1};
+    }
+    else if(turn >= 550 && turn < 980){
+        if (!ZombieStage::isStageTwo(player)) return Zombie::Assault(player);
+        else if (ZombieStage::isStageTwo(player) && !ZombieStage::isStageThree(player))return Zombie::Wait(player);
+        else return {-1, -1};
+    }
+    else if((turn >= 1050 && turn < 1480) || turn >= 1550 ){
+        if(!ZombieStage::isStageThree(player)) return Zombie::WaveByWave(player);
+        else return {-1, -1};
+    }
+    return {-1, -1};
 }
 plant Plant::SunFlower(IPlayer* player) {
 
@@ -1013,28 +1032,6 @@ void Plant::RemovePeaShooter(IPlayer* player, plant pt) {
     if (pt.type == 3 && Plants[pt.row][pt.col] == 4)
         player->removePlant(pt.row, pt.col);
 }
-int ZombieUtil::BestAssault(IPlayer *player) {
-    int* LeftLines = player->Camp->getLeftLines();
-    int* PeaNum = BattleField::NumPlantArray(3, player);
-    int* WinterNum = BattleField::NumPlantArray(2, player);
-    int* NutNum = BattleField::NumPlantArray(4, player);
-    int* IronNum = BattleField::NumZombieArray(2, player);
-    int* NorNum = BattleField::NumZombieArray(1, player);
-    int Arr[5];
-    for(int i = 0; i < 5; ++i){
-        Arr[i] = PeaNum[i] + 4 * WinterNum[i] + NutNum[i] - 2 * IronNum[i] - NorNum[i];
-    }
-    int row = -1;
-    int min = 100;
-    for(int i = 0; i < 5; ++i){
-        if(LeftLines[i] == 0) continue;
-        if(min > Arr[i]){
-            min = Arr[i];
-            row = i;
-        }
-    }
-    return row;
-}
 bool ZombieStage::isStageOne(IPlayer *player) {
     // 有LeftLine-1行都有豌豆了
     int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
@@ -1078,6 +1075,28 @@ bool ZombieStage::isStageFour(IPlayer *player) {
     for(int i = 0; i < 5; ++i)
         if(NumWinter[i] >= 3) greater++;
     return greater >= LeftLineNumber;
+}
+int ZombieUtil::BestAssault(IPlayer *player) {
+    int* LeftLines = player->Camp->getLeftLines();
+    int* PeaNum = BattleField::NumPlantArray(3, player);
+    int* WinterNum = BattleField::NumPlantArray(2, player);
+    int* NutNum = BattleField::NumPlantArray(4, player);
+    int* IronNum = BattleField::NumZombieArray(2, player);
+    int* NorNum = BattleField::NumZombieArray(1, player);
+    int Arr[5];
+    for(int i = 0; i < 5; ++i){
+        Arr[i] = PeaNum[i] + 4 * WinterNum[i] + NutNum[i] - 2 * IronNum[i] - NorNum[i];
+    }
+    int row = -1;
+    int min = 100;
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
+        if(min > Arr[i]){
+            min = Arr[i];
+            row = i;
+        }
+    }
+    return row;
 }
 int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
     int turn = player->getTime();
@@ -1303,7 +1322,7 @@ zombie Zombie::Wait(IPlayer *player) {
      */
     return {-1, -1};
 }
-zombie Zombie::ZombieWave(IPlayer *player) {
+zombie Zombie::ZombieWave2(IPlayer *player) {
     int Sun = player->Camp->getSun();
     int row = ForceCompare::WeakestRow(player);
     int disRow = ZombieUtil::BestDistribution(player);
