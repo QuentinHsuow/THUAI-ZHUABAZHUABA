@@ -342,6 +342,15 @@ namespace ZombieUtil{
    【修改记录】
    *************************************************************************/
     int AssaultAvoidSquash(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】
+   【函数功能】 返回作为僵尸方剩余植物的行数
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+   *************************************************************************/
+    int getLeftLineNumZom(IPlayer* player);
 }
 
 namespace Zombie {
@@ -670,7 +679,7 @@ plant Util::GetBestPlant(IPlayer *player) {
 zombie Util::GetBestZombie(IPlayer *player){
     if(ZombieUtil::isStageFour(player)) return {-1, -1}; // 放送人头机制
     int turn = player->getTime();
-    if (turn < 100 && !ZombieUtil::isStageOne(player)) return Zombie::Start(player);
+    if (!ZombieUtil::isStageOne(player)) return Zombie::Start(player);
     if (turn < 480 && !ZombieUtil::isStageTwo(player)) return Zombie::Assault(player);
     if (turn < 480 && ZombieUtil::isStageTwo(player)) return Zombie::Wait(player);
     if (turn >= 480 && turn < 550) return Zombie::ZombieWave(player);
@@ -694,7 +703,7 @@ plant Plant::SunFlower(IPlayer* player) {
     int row = -1;
     int p = 0;
 
-    if (turn < 30) {
+    if (turn < 50) {
         for (int j = 4; j >= 3; --j)
             for (int i = 0; i < 5; ++i) {
                 if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
@@ -722,7 +731,8 @@ plant Plant::SunFlower(IPlayer* player) {
         }
         if (i != 5) tmp = 6;//如果发现第3列开始种寒冰了，将向日葵调整至第6列
         for (int i = 0; i < 5; ++i) {
-            if (LeftLines[i] == 0) continue;
+            if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
+                                     2 * ForceCompare::ForceCalculation(i, true, player)) continue;
             if (Plants[i][4] == 0) { row = i; col = 4; p = 1150; break; }
             if (Plants[i][tmp] == 0) { row = i; col = tmp; p = 1150; break; }
             if (Plants[i][7] == 0 && turn < 500)
@@ -730,7 +740,7 @@ plant Plant::SunFlower(IPlayer* player) {
                 bool flag = true;
                 for (int j = 0; j < 5; j++)
                     if (Plants[j][2] != 2) flag = false;//前500回，如果种了一列寒冰，就在第七行种植临时的向日葵
-                if(flag) { row = i; col = 7; p = 1150; break; }
+                if (flag) { row = i; col = 7; p = 1150; break; }
             }
         }
     }
@@ -1034,17 +1044,19 @@ int ZombieUtil::BestAssault(IPlayer *player) {
     return row;
 }
 bool ZombieUtil::isStageOne(IPlayer *player) {
-    int LeftLineNumber = player->getNotBrokenLines();
+    int LeftLineNumber = getLeftLineNumZom(player);
+    int* LeftLines = player->Camp->getLeftLines();
     int* NumPea = BattleField::NumPlantArray(3, player);
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
         if(NumPea[i] != 0 || NumWinter[i] != 0) greater++;
     }
     return greater >= LeftLineNumber;
 }
 bool ZombieUtil::isStageTwo(IPlayer *player) {
-    int LeftLineNumber = player->getNotBrokenLines();
+    int LeftLineNumber = getLeftLineNumZom(player);
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int* NumPea = BattleField::NumPlantArray(3, player);
@@ -1055,7 +1067,7 @@ bool ZombieUtil::isStageTwo(IPlayer *player) {
     return greater >= LeftLineNumber;
 }
 bool ZombieUtil::isStageThree(IPlayer* player){
-    int LeftLineNumber = player->getNotBrokenLines();
+    int LeftLineNumber = getLeftLineNumZom(player);
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
@@ -1065,12 +1077,12 @@ bool ZombieUtil::isStageThree(IPlayer* player){
     return greater >= LeftLineNumber-2;
 }
 bool ZombieUtil::isStageFour(IPlayer *player) {
-    int LeftLineNumber = player->getNotBrokenLines();
+    int LeftLineNumber = getLeftLineNumZom(player);
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
-    for(int i = 0; i < 5; ++i){
+    for(int i = 0; i < 5; ++i)
         if(NumWinter[i] >= 4) greater++;
-    }
+
     return greater >= LeftLineNumber;
 }
 int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
@@ -1226,6 +1238,13 @@ int ZombieUtil::AssaultAvoidSquash(IPlayer* player){
         }
     }
     return row;
+}
+int ZombieUtil::getLeftLineNumZom(IPlayer *player) {
+    int* LeftLines = player->Camp->getLeftLines();
+    int left = 0;
+    for(int i = 0; i < 5; ++i)
+        if(LeftLines[i] == 1) left++;
+    return left;
 }
 zombie Zombie::Start(IPlayer *player){
     int turn = player->getTime();
