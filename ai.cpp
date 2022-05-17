@@ -268,6 +268,7 @@ namespace ZombieUtil{
    【返回值】 僵尸放置的行数
    【修改记录】5.14增加该函数
              5.15不能完全看向日葵
+             5.17找没有战斗力的一行放
     *************************************************************************/
     int StartBestPositionNormal(IPlayer* player);
 
@@ -277,6 +278,7 @@ namespace ZombieUtil{
    【参数】 \
    【返回值】
    【修改记录】5.14add
+             5.17 找没有向日葵的一行放
     *************************************************************************/
     int StartBestPositionBucket(IPlayer* player);
 
@@ -286,6 +288,7 @@ namespace ZombieUtil{
    【参数】 \
    【返回值】 -1 不应该放置pole， [0,4]放置pole的行数
    【修改记录】5.14 change name
+             5.17 如果对手在有铁桶的一行放窝瓜
     *************************************************************************/
     int StartBestPositionPole(IPlayer* player);
 
@@ -1053,9 +1056,9 @@ bool ZombieStage::isStageTwo(IPlayer *player) {
     int* NumPea = BattleField::NumPlantArray(3, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i){
-        if(NumWinter[i] >= 1 || NumPea[i] >= 2) greater++;
+        if(NumWinter[i] >= 1 || NumPea[i] >= 3) greater++;
     }
-    return greater >= LeftLineNumber-1;
+    return greater >= LeftLineNumber;
 }
 bool ZombieStage::isStageThree(IPlayer* player){
     // 有LeftLine-1行都有2个寒冰了
@@ -1107,33 +1110,18 @@ int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
     int *IronNum = BattleField::NumZombieArray(2, player);
     int* NorNum = BattleField::NumZombieArray(1, player);
     int* PoleNum = BattleField::NumZombieArray(3, player);
+    int num = 100;
     int max = 0;
     int row = -1;
 
-    if(turn == 10) {
+    if(turn == 4) {
         for (int i = 0; i < 5; ++i) {
+            // 跳过空行
             if (LeftLines[i] == 0) continue;
-            if(SunFlowerNum[i] != 0) row = i;
+            // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
+            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0 && PoleNum[i] == 0) row = i;
         }
-        if(row == -1){
-            for(int i = 0; i < 5; ++i){
-                if(LeftLines[i] == 0) continue;
-                if(IronNum[i] != 0) row = i;
-            }
-        }
-        if(row == -1) {
-            for (int i = 0; i < 5; ++i) {
-                if (LeftLines[i] == 0) continue;
-                if (PoleNum[i] != 0) row = i;
-            }
-        }
-        if(row == -1){
-            for(int i = 0; i < 5; ++i){
-                if(LeftLines[i] == 0) continue;
-                if(NutNum[i] == 0 && PeaNum[i] == 0) row = i;
-            }
-        }
-    } // turn == 10
+    }//turn == 4
 
     else{
         for(int i = 0; i < 5; ++i){
@@ -1169,12 +1157,13 @@ int ZombieUtil::StartBestPositionBucket(IPlayer *player) {
     int row = -1;
     int max = 0;
 
-    if(turn == 2) {
+    // 找有向日葵的一行放
+    if(turn == 1) {
         for (int i = 0; i < 5; ++i) {
             if (LeftLines[i] == 0) continue;
             if (SunFlowerNum[i] != 0) row = i;
         }
-    }// turn == 2
+    }// turn == 1
 
     else{
         for(int i = 0; i < 5; ++i){
@@ -1207,9 +1196,7 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
             // 跳过空行
             if (LeftLines[i] == 0) continue;
             // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0){
-                row = i;
-            }
+            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0) row = i;
         }
     }//turn == 3
 
@@ -1268,12 +1255,12 @@ zombie Zombie::Start(IPlayer *player){
     int rowPole = ZombieUtil::StartBestPositionPole(player);
 
     // 前期的特定操作
-    if(turn == 2 && rowBucket != -1) return {2, rowBucket};
+    if(turn == 1 && rowBucket != -1) return {2, rowBucket};
     if(turn == 3 && rowPole != -1) return{3, rowPole};
-    if(turn == 10 && rowNormal != -1) return{1, rowNormal};
+    if(turn == 4 && rowNormal != -1) return{1, rowNormal};
 
     // 从第十回合开始
-    if(turn > 10){
+    if(turn > 4){
         if(rowBucket != -1 && PlantCD[1] == 0) return {2, rowBucket};
         if(rowNormal != -1 && PlantCD[0] == 0) return {1, rowNormal};
     }
@@ -1327,21 +1314,25 @@ zombie Zombie::ZombieWave2(IPlayer *player) {
     int row = ForceCompare::WeakestRow(player);
     int disRow = ZombieUtil::BestDistribution(player);
     int turn = player->getTime();
-    if(ZombieStage::isStageThree(player)){
-        if (turn % 500 == 480) return{ 5, row };
-        if (turn % 500 == 495 && Sun > 650) return{ 4, row };
-        if (turn % 500 == 5)return{ 5, row };
-        if (turn % 500 >= 20 && turn % 500 <= 50) return {4, row};
-        else return { -1, -1 };
-    }
-    else{
-        if (turn % 500 == 490) return {5, row};
-        if (turn % 500 == 495 && Sun > 350) return {4,row};
-        if (turn % 500 == 500) return {5, disRow};
-        if (turn % 500 == 510)  return {4, row};
-        if (turn % 500 >= 20 && turn % 500 <= 50) return {5, row};
-        else return {-1, -1};
-    }
+
+    if (turn % 500 == 490) return {5, row};
+    if (turn % 500 == 495 && Sun > 350) return {4,row};
+    if (turn % 500 == 500) return {5, disRow};
+    if (turn % 500 == 510)  return {4, row};
+    if (turn % 500 >= 20 && turn % 500 <= 50) return {5, row};
+    return {-1, -1};
+
+}
+zombie Zombie::ZombieWave3(IPlayer *player) {
+    int Sun = player->Camp->getSun();
+    int row = ForceCompare::WeakestRow(player);
+    int turn = player->getTime();
+
+    if (turn % 500 == 480) return{ 5, row };
+    if (turn % 500 == 495 && Sun > 650) return{ 4, row };
+    if (turn % 500 == 5)return{ 5, row };
+    if (turn % 500 >= 20 && turn % 500 <= 50) return {4, row};
+    return { -1, -1 };
 }
 zombie Zombie::WaveByWave(IPlayer *player)  {
     int* PlantCD = player->Camp->getPlantCD();
@@ -1352,24 +1343,14 @@ zombie Zombie::WaveByWave(IPlayer *player)  {
     int LeftTurn = 100 - turn % 100;
     int SunPerStep = turn / 200 + 1;
 
-    if(!ZombieStage::isStageThree(player)) {
-        if (turn % 100 == 0) return {5, row};
-        if (turn % 100 == 15) return {4, row};
-        if (turn % 100 == 25) return {5, row};
-        if (Sun > 600 - LeftTurn * SunPerStep && turn % 100 > 30) {
-            if (PlantCD[4] == 0) return {5, row};
-            if (PlantCD[3] == 0) return {4, row};
-        }
+    if (turn % 100 == 0) return {5, row};
+    if (turn % 100 == 15) return {4, row};
+    if (turn % 100 == 25) return {5, disRow};
+    if (Sun > 600 - LeftTurn * SunPerStep && turn % 100 > 30) {
+        if (PlantCD[4] == 0) return {5, row};
+        if (PlantCD[3] == 0) return {4, row};
     }
-    else{
-        if(turn % 100 == 0) return {5, row};
-        if(turn % 100 == 10) return {4, row};
-        if(turn % 100 == 25) return {5, disRow};
-        if (Sun > 600 - LeftTurn * SunPerStep && turn % 100 > 30) {
-            if (PlantCD[4] == 0) return {5, row};
-            if (PlantCD[3] == 0) return {4, row};
-        }
-    }
+
     return {-1, -1};
 }
 
