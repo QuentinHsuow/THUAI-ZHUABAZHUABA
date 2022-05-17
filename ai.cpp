@@ -434,12 +434,12 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
             ++planttmp[0][0];
             planttmp[0][(planttmp[0][0])] = j;
         }//冰豌豆
-        if (Plants[row][j] == 3)
+        else if (Plants[row][j] == 3)
         {
             ++planttmp[1][0];
             planttmp[1][(planttmp[1][0])] = j;
         }//豌豆
-        if (Plants[row][j] == 4)
+        else if (Plants[row][j] == 4)
         {
             ++planttmp[2][0];
             planttmp[2][(planttmp[2][0])] = j;
@@ -457,10 +457,10 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
         for (int i = 1; i <= planttmp[1][0]; i++)
             sum += (10 - planttmp[1][i]) * 10 * 5;
         //坚果墙
-        if (planttmp[2][0] != 0 && zombietmp[4] != 0 && zombietmp[3] != 0)//存在巨人或者雪车，坚果就不顶用了
+        if (planttmp[2][0] != 0 && zombietmp[4] == 0 && zombietmp[3] == 0)//存在巨人或者雪车，坚果就不顶用了
         {
             int allZombieNum = 0;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 3; i++)
                 allZombieNum += zombietmp[i];// 计算僵尸总量
             sum += 530 * planttmp[2][0] * (allZombieNum - zombietmp[2]) / allZombieNum;//存在撑杆僵尸，坚果墙将会被削弱
             if (planttmp[1][0] == 0 && planttmp[0][0] == 0) sum = 100 * planttmp[2][0];//如果没有豌豆掩护，坚果用处降低
@@ -814,6 +814,7 @@ plant Plant::PeaShooter(IPlayer* player) {
     int* LeftLines = player->Camp->getLeftLines();
     int*** Zombies = player->Camp->getCurrentZombies();
     int turn = player->getTime();
+    int N = player->getNotBrokenLines();
 
     int p = 0;
     int row = 0;
@@ -823,10 +824,23 @@ plant Plant::PeaShooter(IPlayer* player) {
     {
         p = 1150;
         //在没有坚果保护的情况下别种豌豆,保证先种坚果
-        int* arr = ForceCompare::StrongerArray(player);
-        int arrRow[5] = { 0, 1, 2, 3, 4 };
-        for (int i = 0; i < 4; i++)
-            for (int j = 0; j < 4 - i; j++)
+        int* arr = new int[N];
+        int* arrRow = new int[N];
+        for (int i = 0; i < N; i++)
+        {
+            arr[i] = 0;
+            arrRow[i] = 0;
+        }
+        int tmpaccount = 0;
+        for (int i = 0; i < 5; i++)
+            if (LeftLines[i] != 0)
+            {
+                arr[tmpaccount] = ForceCompare::StrongerAmount(i, player);
+                arrRow[tmpaccount] = i;
+                tmpaccount++;
+            }
+        for (int i = 0; i < N - 1; i++)
+            for (int j = 0; j < N -1 - i; j++)
             {
                 if (arr[j + 1] < arr[j])
                 {
@@ -836,22 +850,29 @@ plant Plant::PeaShooter(IPlayer* player) {
                     tmp = arrRow[j + 1]; arrRow[j + 1] = arrRow[j]; arrRow[j] = tmp;
                 }
             }//将strongarray排序
+        /*
+        std::cout << arrRow[0] << " "
+            << arrRow[1] << " "
+            << arrRow[2] << " "
+            << arrRow[3] << " "
+            << arrRow[4] << " " << std::endl;
+            */
         int i = 0;
-        for (i = 0; i < 5; ++i)
+        for (i = 0; i < N; ++i)
         {
             int j = 0;
-            int tmpj = ForceCompare::ForceCalculation(i, true, player) / 50 + 2;
-            if (tmpj > 10) tmpj == 10;
+            int tmpj = ForceCompare::ForceCalculation(arrRow[i], true, player) / 50 + 2;
+            if (tmpj > 10) tmpj = 10;
             for (j = 0; j < tmpj; ++j)
-                if (Zombies[ (arrRow[i]) ][j][0] != -1)
+                if (Zombies[(arrRow[i])][j][0] != -1)
                     break;
-            if (j == tmpj || ForceCompare::ForceCalculation(i, false, player) != 0)
+            if (j == tmpj || ForceCompare::ForceCalculation(arrRow[i], false, player) != 0)
             {
                 row = arrRow[i];
                 break;
             }
         }
-        if (i == 5) p = 0;
+        if (i == N) p = 0;
         if (Plants[row][0] == 0) col = 0;
         else if (Plants[row][1] == 0) col = 1;
         else col = -1;//没地方种了，以后可以在这里加入铲子
@@ -988,7 +1009,7 @@ plant Plant::Squash(IPlayer* player) {
             if (BattleField::DenseOfZombie(player, i, j) > puttmp
                 && Boss.priority < ptmp)//取最大优先度
                 if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 6);
-                else Util::SetPlant(&Boss, i, j - 1, ptmp, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
+                else Util::SetPlant(&Boss, i, j, ptmp, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
             //绝地反击，如果僵尸快打穿了
             if (j == 0 && Zombies[i][0][0] != -1 && Boss.priority < 2000)
                 Util::SetPlant(&Boss, i, 0, 2000, 6);//此地逻辑存疑，待修正
