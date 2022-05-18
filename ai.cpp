@@ -347,15 +347,6 @@ namespace ZombieStage{
    【修改记录】 5.5 通过寒冰射手是否大于BrokenLines-2来判断是否进入后期
     *************************************************************************/
     bool isStageThree(IPlayer* player);
-
-    /*************************************************************************
-   【函数名称】 isStageFour
-   【函数功能】 判断是否停止送人头
-   【参数】 \
-   【返回值】 false - continue, true - stop
-   【修改记录】
-    *************************************************************************/
-    bool isStageFour (IPlayer* player);
 }
 
 namespace Zombie {
@@ -365,6 +356,7 @@ namespace Zombie {
     【参数】 /
     【返回值】 最佳僵尸
     【修改历史】5.5 增加了放在某一行的判断；
+              5.18 铁桶能不能放
      *************************************************************************/
     zombie Start(IPlayer *player);
     zombie Assault(IPlayer *player);
@@ -373,6 +365,7 @@ namespace Zombie {
     zombie ZombieWave3(IPlayer* player);
     zombie WaveByWave(IPlayer *player);
     zombie NextWave(IPlayer* player);
+    zombie FinalBattle(IPlayer* player);
 }
 
 void player_ai(IPlayer* player)
@@ -1036,7 +1029,7 @@ plant Plant::Squash(IPlayer* player) {
             for (i = 0; i < 5; i++)
             {
                 if (LeftLines[i] == 0) continue;
-                if (Plants[i][columns - 2] == 0)
+                if (Plants[i][columns - 2] == 0 || Plants[i][columns - 2] == 4)
                     Util::SetPlant(&Boss, i, columns - 2, 500, 6);
             }
         }
@@ -1051,6 +1044,8 @@ void Plant::RemovePeaShooter(IPlayer* player, plant pt) {
         player->removePlant(pt.row, pt.col);
     if (pt.type == 3 && Plants[pt.row][pt.col] == 4)
         player->removePlant(pt.row, pt.col);
+    if (pt.type == 6 && Plants[pt.row][pt.col] == 4)
+        player->removePlant(pt.row, pt.col);
 }
 bool ZombieStage::isStageOne(IPlayer *player) {
     // 有LeftLine-1行都有豌豆了
@@ -1059,13 +1054,11 @@ bool ZombieStage::isStageOne(IPlayer *player) {
     int* NumPea = BattleField::NumPlantArray(3, player);
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
-    int Dgreater = 0;
     for(int i = 0; i < 5; ++i){
         if(LeftLines[i] == 0) continue;
         if(NumPea[i] != 0 || NumWinter[i] != 0) greater++;
-        if(NumPea[i] >= 2) Dgreater ++;
     }
-    return (greater >= LeftLineNumber - 1 )&& Dgreater >= 1;
+    return greater >= LeftLineNumber;
 }
 bool ZombieStage::isStageTwo(IPlayer *player) {
     // 有LeftLine-1行都有一个寒冰或者三个豌豆了
@@ -1087,15 +1080,6 @@ bool ZombieStage::isStageThree(IPlayer* player){
     for(int i = 0; i < 5; ++i)
         if(NumWinter[i] >= 2) greater++;
     return greater >= LeftLineNumber-1;
-}
-bool ZombieStage::isStageFour(IPlayer *player) {
-    // 有LeftLine行都有5个寒冰了
-    int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
-    int* NumWinter = BattleField::NumPlantArray(2, player);
-    int greater = 0;
-    for(int i = 0; i < 5; ++i)
-        if(NumWinter[i] >= 5) greater++;
-    return greater >= LeftLineNumber;
 }
 int ZombieUtil::BestAssault(IPlayer *player) {
     int* LeftLines = player->Camp->getLeftLines();
@@ -1138,12 +1122,14 @@ int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
     int max = -1;
     int row = -1;
 
-    if(turn == 3) {
+    if(turn == 2) {
         for (int i = 0; i < 5; ++i) {
             // 跳过空行
             if (LeftLines[i] == 0) continue;
             // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0 && PoleNum[i] == 0) row = i;
+            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0 && PoleNum[i] == 0) {
+                if(row == -1 ||( row != -1 && (SunFlowerNum[i] > SunFlowerNum[row])) ) row = i;
+            }
         }
     }//turn == 3
 
@@ -1224,15 +1210,19 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
     int* PeaNum = BattleField::NumPlantArray(3, player);
     int* IronNum = BattleField::NumZombieArray(2, player);
     int* NutNum = BattleField::NumPlantArray(4, player);
+    int* NorNum = BattleField::NumZombieArray(1, player);
+    int* SunFlowerNum = BattleField::NumPlantArray(1, player);
     int row = -1;
 
     // 在第三回合的特殊判断
-    if(turn == 5) {
+    if(turn == 4) {
         for (int i = 0; i < 5; ++i) {
             // 跳过空行
             if (LeftLines[i] == 0) continue;
             // 筛选出没有铁桶僵尸并且没有豌豆和坚果的一行
-            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0) row = i;
+            if (IronNum[i] == 0 && PeaNum[i] == 0 && NutNum[i] == 0 && NorNum[i] == 0) {
+                if( row == -1 ||( row != -1 &&(SunFlowerNum[i] > SunFlowerNum[row])))row = i;
+            }
         }
     }//turn == 5
 
@@ -1300,8 +1290,8 @@ zombie Zombie::Start(IPlayer *player){
 
     // 前期的特定操作
     //if(turn == 2 && rowBucket != -1) return {2, rowBucket};
-    if(turn == 3 && rowNormal != -1) return{1, rowNormal};
-    if(turn == 5 && rowPole != -1) return{3, rowPole};
+    if(turn == 2 && rowNormal != -1) return{1, rowNormal};
+    if(turn == 4 && rowPole != -1) return{3, rowPole};
 
     // 从第十回合开始
     if(turn > 5){
