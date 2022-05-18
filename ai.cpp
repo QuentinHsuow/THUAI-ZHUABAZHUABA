@@ -20,6 +20,7 @@ struct plant {
 struct zombie{
     int type;
     int row;
+    bool operator == (const zombie& z)const {return type == z.type && row == z.row;}
 };
 
 /* ForceCompare
@@ -329,7 +330,7 @@ namespace ZombieUtil{
    【返回值】 false - continue, true - stop
    【修改记录】
    *************************************************************************/
-    int AssaultAvoidSquash(IPlayer* player);
+    int AvoidSquash(IPlayer* player);
 
     /*************************************************************************
    【函数名称】
@@ -347,9 +348,9 @@ namespace ZombieUtil{
    【返回值】 false - continue, true - stop
    【修改记录】
    *************************************************************************/
-    int FinalDistribution(IPlayer* player);
+    /*int FinalDistribution(IPlayer* player);
     int FinalNext(IPlayer* player);
-    int FinalEnforce(IPlayer* player);
+    int FinalEnforce(IPlayer* player);*/
 }
 
 namespace ZombieStage{
@@ -397,7 +398,7 @@ namespace Zombie {
     zombie ZombieWave3(IPlayer* player);
     zombie WaveByWave(IPlayer *player);
     zombie NextWave(IPlayer* player);
-    zombie FinalBattle(IPlayer* player);
+    //zombie FinalBattle(IPlayer* player);
 }
 
 void player_ai(IPlayer* player)
@@ -627,9 +628,11 @@ int* BattleField::NumPlantArray(int type, IPlayer *player) {
 bool* BattleField::SquashFirstArray(IPlayer* player){
     int** Plants = player->Camp->getCurrentPlants();
     int cols = player->Camp->getColumns();
+    int* GArr = NumZombieArray(5, player);
+    int* SArr = NumZombieArray(4, player);
     bool* arr = new bool[5];
     for(int i = 0; i < 5; ++i){
-        if(Plants[i][cols-1] == 6 || (Plants[i][cols-2] == 6 && Plants[i][cols-1] != 4)) arr[i] = true;
+        if((Plants[i][cols-1] == 6 || (Plants[i][cols-2] == 6 && Plants[i][cols-1] == 0)) && (SArr[i] != 0 || GArr[i] != 0)) arr[i] = true;
         else arr[i] = false;
     }
     return arr;
@@ -703,7 +706,7 @@ bool BattleField::isManyZombies(int num, int row, IPlayer* player)
     int count = 0;
     for (int j = 0; j < 10; j++)
     {
-        for (int k = 0; Zombies[row][j][k] != 0; ++k)
+        for (int k = 0; Zombies[row][j][k] != -1; ++k)
         {
             ++count;
             if (count >= num) return true;
@@ -750,11 +753,8 @@ zombie Util::GetBestZombie(IPlayer *player){
         if (!ZombieStage::isStageTwo(player)) return Zombie::Assault(player);
         else if (ZombieStage::isStageTwo(player) && !ZombieStage::isStageThree(player))return Zombie::Wait(player);
     }
-    else if ((turn >= 550 && turn < 700) || (turn >= 1050 && turn < 1400) || (turn >= 1550 && turn < 1700)){
+    else if ((turn >= 550 && turn < 700) || (turn >= 1050 && turn < 1400) || turn >= 1550){
         return Zombie::NextWave(player);
-    }
-    else if(turn >= 1700){
-        return Zombie::FinalBattle(player);
     }
     return {-1, -1};
 }
@@ -961,6 +961,7 @@ plant Plant::SmallNut(IPlayer* player) {
     int Sun = player->Camp->getSun();
 
     plant Boss = { 0, 0, 0, 4 };
+    /*
     //在开始时在保护战斗力弱的行
     if (turn < 200)
     {
@@ -973,7 +974,8 @@ plant Plant::SmallNut(IPlayer* player) {
                 Util::SetPlant(&Boss, i, columns - 2, 1000, 4);
         }
     }
-    else
+    */
+    if(turn >= 200)
     {
         //在战斗后期，自动补齐坚果墙
         for (int i = 0; i < rows; i++)
@@ -988,7 +990,7 @@ plant Plant::SmallNut(IPlayer* player) {
         for (int i = 0; i < rows; i++)
         {
             if (LeftLines[i] == 0) continue;
-            int ptmp = 1150 - (j - 7) * 5 - ForceCompare::StrongerAmount(i, player) / 50;//种植坚果的比较机制
+            int ptmp = 1150 - (j - 7) * 5 - ForceCompare::StrongerAmount(i, player) / 100;//种植坚果的比较机制
             if (Zombies[i][j][0] != -1 && Boss.priority < ptmp && Plants[i][j] == 0) {//如果僵尸攻入了内地
                 if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 4);
                 else Util::SetPlant(&Boss, i, j, ptmp, 4);
@@ -1320,7 +1322,7 @@ int ZombieUtil::BestDistribution(IPlayer *player) {
 
     return row;
 }
-int ZombieUtil::AssaultAvoidSquash(IPlayer* player){
+int ZombieUtil::AvoidSquash(IPlayer* player){
     bool* SquashArr = BattleField::SquashFirstArray(player);
     int* LeftLines = player->Camp->getLeftLines();
     int* StrArr = ForceCompare::StrongerArray(player);
@@ -1342,6 +1344,7 @@ int ZombieUtil::getLeftLineNumZom(IPlayer *player) {
         if(LeftLines[i] == 1) left++;
     return left;
 }
+/*
 int ZombieUtil::FinalDistribution(IPlayer *player) {
     int* GArr = BattleField::NumZombieArray(5, player);
     int* SArr = BattleField::NumZombieArray(4, player);
@@ -1383,6 +1386,7 @@ int ZombieUtil::FinalEnforce(IPlayer *player) {
     }
     return -1;
 }
+ */
 zombie Zombie::Start(IPlayer *player){
     int turn = player->getTime();
     int Sun = player->Camp->getSun();
@@ -1408,10 +1412,8 @@ zombie Zombie::Assault(IPlayer *player) {
     int Sun = player->Camp->getSun();
     int* PlantCD = player->Camp->getPlantCD();
     int row = ZombieUtil::BestAssault(player);
-    int AvoidRow = ZombieUtil::AssaultAvoidSquash(player);
 
-    if (AvoidRow != -1) return{1, AvoidRow};
-    else if (row != -1 && PlantCD[1] == 0) return{ 2, row };
+    if (row != -1 && PlantCD[1] == 0) return{ 2, row };
     else if (Sun >= PlantCD[1] * (turn % 200) - 20 && row != -1) return {1, row};
     return { -1, -1 };
 }
@@ -1457,32 +1459,17 @@ zombie Zombie::ZombieWave3(IPlayer *player) {
     if (turn % 500 >= 20 && turn % 500 <= 50) return {4, row};
     return { -1, -1 };
 }
-zombie Zombie::WaveByWave(IPlayer *player)  {
-    int* PlantCD = player->Camp->getPlantCD();
-    int row = ForceCompare::WeakestRow(player);
-    int disRow = ZombieUtil::BestDistribution(player);
-    int turn = player->getTime();
-    int Sun = player->Camp->getSun();
-    int LeftTurn = 100 - turn % 100;
-    int SunPerStep = turn / 200 + 1;
-
-    if (turn % 100 == 0) return {5, row};
-    if (turn % 100 == 15) return {4, row};
-    if (turn % 100 == 25) return {5, disRow};
-    if (Sun > 600 - LeftTurn * SunPerStep && turn % 100 > 30) {
-        if (PlantCD[4] == 0) return {5, row};
-        if (PlantCD[3] == 0) return {4, row};
-    }
-
-    return {-1, -1};
-}
-
 zombie Zombie::NextWave(IPlayer *player) {
+    int turn = player->getTime();
+    int AvoidRow = ZombieUtil::AvoidSquash(player);
+    if (AvoidRow != -1) return {2, AvoidRow};
+
     int* PlantCD = player->Camp->getPlantCD();
     int Sun = player->Camp->getSun();
     int WhereG = BattleField::WhereZombieType(5, player);
     int WhereS = BattleField::WhereZombieType(4, player);
 
+    int* IronNum = BattleField::NumZombieArray(2, player);
     int* PeaNum = BattleField::NumPlantArray(3, player);
     int* WinterNum = BattleField::NumPlantArray(2, player);
     int* LeftLines = player->Camp->getLeftLines();
@@ -1501,18 +1488,25 @@ zombie Zombie::NextWave(IPlayer *player) {
     delete[] PeaNum;
     delete[] WinterNum;
 
-    if ((WhereG != -1 || row != -1 || WhereS != -1) && Sun > 300) {
-        if(PlantCD[4] == 0) return {5,ForceCompare::WeakestRow(player)};
-        else if(PlantCD[3] == 0 && Sun > 300) return{4, ForceCompare::WeakestRow(player)};
+    int WRow = ForceCompare::WeakestRow(player);
+    if ((WhereG != -1 || row != -1 || WhereS != -1 || turn > 1550) && Sun > 300 && WRow != -1) {
+        if(PlantCD[4] == 0) return {5, WRow};
+        else if(PlantCD[3] == 0 && Sun > 300) return{4, WRow};
     }
     return {-1, -1};
 }
+/*
 zombie Zombie::FinalBattle(IPlayer *player) {
     int first = ZombieUtil::FinalDistribution(player);
     int next = ZombieUtil::FinalNext(player);
     int enforce = ZombieUtil::FinalEnforce(player);
     int* PlantCD = player->Camp->getPlantCD();
     int Sun = player->Camp->getSun();
+    int turn = player->getTime();
+    int AvoidRow = ZombieUtil::AvoidSquash(player);
+    int* IronNum = BattleField::NumZombieArray(2, player);
+
+    if(AvoidRow != -1) return {2, AvoidRow};
 
     if(enforce != -1 && PlantCD[4] == 0 && Sun >= 300) return {5, enforce};
     else if(enforce != -1 && PlantCD[3] == 0 && Sun >= 300) return {4, enforce};
@@ -1520,4 +1514,4 @@ zombie Zombie::FinalBattle(IPlayer *player) {
     else if(next != -1 && PlantCD[4] == 0 && Sun >= 300) return {5, next};
     else if(next != -1 && PlantCD[3] == 0 && Sun >= 300) return {4, next};
     return {-1, -1};
-}
+}*/
