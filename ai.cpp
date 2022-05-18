@@ -91,8 +91,10 @@ namespace ForceCompare{
  * 8.WhereZombieType
  * 9.isPlanttype判断某植物在一行的分布
  * 10.isAnySunflower 判断是否有向日葵
+ * 11.isFullForce 判断植物是否为满状态
+ * 12.isManyZombies 判断一行僵尸是不是很多
  */
-namespace BattleField{
+namespace BattleField {
     /*************************************************************************
     【函数名称】 DenseOfZombie
     【函数功能】 计算一格内的僵尸有多少
@@ -100,7 +102,7 @@ namespace BattleField{
     【返回值】 返回row行col列有多少僵尸
     【修改记录】 5.14OKAY
      *************************************************************************/
-    int DenseOfZombie(IPlayer* player, int row, int col);
+    int DenseOfZombie(IPlayer *player, int row, int col);
 
     /*************************************************************************
     【函数名称】 isWithoutWiner
@@ -109,7 +111,7 @@ namespace BattleField{
     【返回值】 true-没有寒冰射手，false-有;如果这一行被攻破，返回false
     【修改记录】 5.14OKAY
      *************************************************************************/
-    bool isWithoutWinter(IPlayer* player, int row);
+    bool isWithoutWinter(IPlayer *player, int row);
 
     /*************************************************************************
     【函数名称】 isWithoutWinterArray
@@ -118,7 +120,7 @@ namespace BattleField{
     【返回值】 bool array[5]; true-没有寒冰射手与建国，false-有;如果这一行被攻破，返回false
     【修改记录】 5.14OKAY
      *************************************************************************/
-    bool* isWithoutWinterArray(IPlayer* player);
+    bool *isWithoutWinterArray(IPlayer *player);
 
     /*************************************************************************
     【函数名称】 NumZombieArray
@@ -127,7 +129,7 @@ namespace BattleField{
     【返回值】 int[5]
     【修改记录】 5.14添加
      *************************************************************************/
-    int* NumZombieArray(int type, IPlayer* player);
+    int *NumZombieArray(int type, IPlayer *player);
 
     /*************************************************************************
     【函数名称】 NumPlantArray
@@ -136,7 +138,7 @@ namespace BattleField{
     【返回值】 int[5]
     【修改记录】 5.14添加
      *************************************************************************/
-    int* NumPlantArray(int type, IPlayer* player);
+    int *NumPlantArray(int type, IPlayer *player);
 
     /*************************************************************************
    【函数名称】 SquashFirstArray
@@ -145,7 +147,7 @@ namespace BattleField{
    【返回值】bool 0-4row; false-without;true-with
    【修改记录】
     *************************************************************************/
-    bool* SquashFirstArray(IPlayer* player);
+    bool *SquashFirstArray(IPlayer *player);
 
     /*************************************************************************
    【函数名称】 WherePlantType
@@ -154,7 +156,7 @@ namespace BattleField{
    【返回值】 -1 都有， [0,4]没有的行数
    【修改记录】5.6添加函数,5.14改成两个函数
     *************************************************************************/
-    int WherePlantType(int type, IPlayer* player);
+    int WherePlantType(int type, IPlayer *player);
 
     /*************************************************************************
    【函数名称】 WhereZombieType
@@ -163,7 +165,7 @@ namespace BattleField{
    【返回值】 -1 都有， [0,4]没有的行数
    【修改记录】5.6添加函数，5.14改成两个函数
     *************************************************************************/
-    int WhereZombieType(int type, IPlayer* player);
+    int WhereZombieType(int type, IPlayer *player);
 
     /*************************************************************************
    【函数名称】 isPlantType
@@ -172,7 +174,7 @@ namespace BattleField{
    【返回值】 / 返回该植物的数量（为了防止内存泄漏，需要使用前创建一个int[11]数组 ）
    【修改记录】
     *************************************************************************/
-    int isPlantType(int row, int t, int arr[11], IPlayer* player);
+    int isPlantType(int row, int t, int arr[11], IPlayer *player);
 
     /*************************************************************************
    【函数名称】 isAnySunflower
@@ -181,8 +183,27 @@ namespace BattleField{
    【返回值】 / true-没有向日葵
    【修改记录】
     *************************************************************************/
-    bool isAnySunflower(IPlayer* player);
+    bool isAnySunflower(IPlayer *player);
+
+    /*************************************************************************
+   【函数名称】 isFullForce
+   【函数功能】 判断植物是否发育完全
+   【参数】 /
+   【返回值】 / true-发育完全
+   【修改记录】
+    *************************************************************************/
+    bool isFullForce(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】 isManyZombies
+   【函数功能】 判断场上僵尸是不是很多
+   【参数】 僵尸数量临界值num, 行数row
+   【返回值】 / true-僵尸大于等于临界值
+   【修改记录】
+    *************************************************************************/
+    bool isManyZombies(int num, int row, IPlayer* player);
 }
+
 
 /* Util
  * @brief: 实用小函数
@@ -318,6 +339,17 @@ namespace ZombieUtil{
    【修改记录】
    *************************************************************************/
     int getLeftLineNumZom(IPlayer* player);
+
+    /*************************************************************************
+   【函数名称】
+   【函数功能】 返回作为僵尸方剩余植物的行数
+   【参数】 \
+   【返回值】 false - continue, true - stop
+   【修改记录】
+   *************************************************************************/
+    int FinalDistribution(IPlayer* player);
+    int FinalNext(IPlayer* player);
+    int FinalEnforce(IPlayer* player);
 }
 
 namespace ZombieStage{
@@ -654,6 +686,31 @@ bool BattleField::isAnySunflower(IPlayer* player)
     }
     return true;
 }
+bool BattleField::isFullForce(IPlayer* player)
+{
+    int* arr = BattleField::NumPlantArray(2, player);
+    int* LeftLines = player->Camp->getLeftLines();
+    for (int i = 0; i < 5; ++i)
+    {
+        if (LeftLines[i] == 0) continue;
+        if (arr[i] < 2) return false;
+    }
+    return true;
+}
+bool BattleField::isManyZombies(int num, int row, IPlayer* player)
+{
+    int*** Zombies = player->Camp->getCurrentZombies();
+    int count = 0;
+    for (int j = 0; j < 10; j++)
+    {
+        for (int k = 0; Zombies[row][j][k] != 0; ++k)
+        {
+            ++count;
+            if (count >= num) return true;
+        }
+    }
+    return false;
+}
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -687,21 +744,17 @@ zombie Util::GetBestZombie(IPlayer *player){
     // [370,480) 摆烂
     else if((turn >= 480 && turn < 550) || (turn >= 980 && turn < 1050) || (turn >= 1480 && turn < 1550)){
         if(!ZombieStage::isStageThree(player)) return Zombie::ZombieWave2(player);
-        else if(ZombieStage::isStageThree(player) && !ZombieStage::isStageFour(player)) return Zombie::ZombieWave3(player);
-        else if(ZombieStage::isStageFour(player)) return {-1, -1};
+        else if(ZombieStage::isStageThree(player)) return Zombie::ZombieWave3(player);
     }
-    else if(turn >= 650 && turn < 980){
+    else if(turn >= 700 && turn < 980 ){
         if (!ZombieStage::isStageTwo(player)) return Zombie::Assault(player);
         else if (ZombieStage::isStageTwo(player) && !ZombieStage::isStageThree(player))return Zombie::Wait(player);
-        else return {-1, -1};
     }
-    else if ((turn >= 1050 && turn < 1300) || (turn >= 1550 && turn < 1800)|| (turn >= 550 && turn < 650)){
-        if(!ZombieStage::isStageFour(player)) return Zombie::NextWave(player);
-        else return{-1, -1};
+    else if ((turn >= 550 && turn < 700) || (turn >= 1050 && turn < 1400) || (turn >= 1550 && turn < 1700)){
+        return Zombie::NextWave(player);
     }
-    else if((turn >= 1300 && turn < 1480) || turn >= 1800 ){
-        if(!ZombieStage::isStageThree(player)) return Zombie::WaveByWave(player);
-        else return {-1, -1};
+    else if(turn >= 1700){
+        return Zombie::FinalBattle(player);
     }
     return {-1, -1};
 }
@@ -967,9 +1020,11 @@ plant Plant::Pepper(IPlayer* player) {
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
     int turn = player->getTime();
+    int* arr = BattleField::NumPlantArray(2, player);
 
-    int value = 1600;
-    if (turn > 50) value = 1700;//小trick,在比赛开始时，降低使用辣椒的门槛，使得两个铁桶就能触发辣椒
+    int value = 1600;//在比赛开始时，降低使用辣椒的门槛，使得两个铁桶就能触发辣椒
+    if (turn > 50 && !BattleField::isFullForce(player)) value = 1700;
+    else if (turn > 50 && BattleField::isFullForce(player)) value = 5999;
 
     plant Boss = { 0,0,0, 5 };
     for (int i = 0;i < rows;i++)
@@ -978,7 +1033,8 @@ plant Plant::Pepper(IPlayer* player) {
         int ptmp = 1150 + ForceCompare::StrongerAmount(i, player) * 100 / 10000;
         //优先度调节，如果一格内的僵尸浓度超过总战力值的一半，优先放倭瓜，否则放辣椒
         if (ForceCompare::ForceCalculation(i, true, player) - 1200 > ForceCompare::ForceCalculation(i, false, player)
-            || ForceCompare::ForceCalculation(i, true, player) > value)
+            || ForceCompare::ForceCalculation(i, true, player) > value
+            || BattleField::isManyZombies(i, 3, player))
             if (Boss.priority < ptmp)
                 Util::SetPlant(&Boss, i, columns - 1, ptmp, 5);//优先级应该较高
     }
@@ -1048,7 +1104,7 @@ void Plant::RemovePeaShooter(IPlayer* player, plant pt) {
         player->removePlant(pt.row, pt.col);
 }
 bool ZombieStage::isStageOne(IPlayer *player) {
-    // 有LeftLine-1行都有豌豆了
+    // 有LeftLine行都有豌豆了
     int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int* LeftLines = player->Camp->getLeftLines();
     int* NumPea = BattleField::NumPlantArray(3, player);
@@ -1061,14 +1117,14 @@ bool ZombieStage::isStageOne(IPlayer *player) {
     return greater >= LeftLineNumber;
 }
 bool ZombieStage::isStageTwo(IPlayer *player) {
-    // 有LeftLine-1行都有一个寒冰或者三个豌豆了
+    // 有LeftLine-1行都有一个寒冰或者2个豌豆了
     int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int* NumPea = BattleField::NumPlantArray(3, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i)
-        if(NumWinter[i] >= 1 || NumPea[i] >= 3) greater++;
+        if(NumWinter[i] >= 1 || NumPea[i] >= 2) greater++;
     return greater >= LeftLineNumber-1;
 }
 bool ZombieStage::isStageThree(IPlayer* player){
@@ -1280,6 +1336,47 @@ int ZombieUtil::getLeftLineNumZom(IPlayer *player) {
         if(LeftLines[i] == 1) left++;
     return left;
 }
+int ZombieUtil::FinalDistribution(IPlayer *player) {
+    int* GArr = BattleField::NumZombieArray(5, player);
+    int* SArr = BattleField::NumZombieArray(4, player);
+    int* WinterNum = BattleField::NumPlantArray(2, player);
+    int* LeftLines = player->Camp->getLeftLines();
+    int max = 10000;
+    int row = -1;
+
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
+        if(GArr[i] == 0 && SArr[i] == 0){
+            if(row == -1 || (row != -1 && WinterNum[i] < WinterNum[row])) row = i;
+        }
+    }
+    return row;
+}
+int ZombieUtil::FinalNext(IPlayer *player) {
+    int* GArr = BattleField::NumZombieArray(5, player);
+    int* SArr = BattleField::NumZombieArray(4, player);
+    int* LeftLines = player->Camp->getLeftLines();
+
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
+        if(GArr[i] != 0 && SArr[i] == 0) return i;
+    }
+    return -1;
+}
+int ZombieUtil::FinalEnforce(IPlayer *player) {
+    int* GArr = BattleField::NumZombieArray(5, player);
+    int* SArr = BattleField::NumZombieArray(4, player);
+    int* WinArr = BattleField::NumPlantArray(2, player);
+    int* LeftLines = player->Camp->getLeftLines();
+    int maxrow = 0;
+
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
+        if(GArr[i] != 0 && SArr[i] != 0) maxrow++;
+        if(maxrow == 2) return i;
+    }
+    return -1;
+}
 zombie Zombie::Start(IPlayer *player){
     int turn = player->getTime();
     int Sun = player->Camp->getSun();
@@ -1294,7 +1391,7 @@ zombie Zombie::Start(IPlayer *player){
     if(turn == 4 && rowPole != -1) return{3, rowPole};
 
     // 从第十回合开始
-    if(turn > 5){
+    if(turn > 6){
         if(rowBucket != -1 && PlantCD[1] == 0 && Sun > 115) return {2, rowBucket};
         if(rowNormal != -1 && PlantCD[0] == 0) return {1, rowNormal};
     }
@@ -1387,7 +1484,7 @@ zombie Zombie::NextWave(IPlayer *player) {
     int min = 100;
     for(int i = 0; i < 5; ++i){
         if(LeftLines[i] == 0) continue;
-        if(WinterNum[i] <= 1 && PeaNum[i] < 2){
+        if(WinterNum[i] <= 3 && PeaNum[i] < 3){
             if(WinterNum[i] < min){
                 min = WinterNum[i];
                 row = i;
@@ -1397,7 +1494,24 @@ zombie Zombie::NextWave(IPlayer *player) {
 
     delete[] PeaNum;
     delete[] WinterNum;
-    if ((WhereG != -1 || row != -1 || WhereS != -1) && PlantCD[4] == 0 && Sun > 300) return {5, ForceCompare::WeakestRow(player)};
+
+    if ((WhereG != -1 || row != -1 || WhereS != -1) && Sun > 300) {
+        if(PlantCD[4] == 0) return {5,ForceCompare::WeakestRow(player)};
+        else if(PlantCD[3] == 0 && Sun > 300) return{4, ForceCompare::WeakestRow(player)};
+    }
     return {-1, -1};
 }
+zombie Zombie::FinalBattle(IPlayer *player) {
+    int first = ZombieUtil::FinalDistribution(player);
+    int next = ZombieUtil::FinalNext(player);
+    int enforce = ZombieUtil::FinalEnforce(player);
+    int* PlantCD = player->Camp->getPlantCD();
+    int Sun = player->Camp->getSun();
 
+    if(enforce != -1 && PlantCD[4] == 0 && Sun >= 300) return {5, enforce};
+    else if(enforce != -1 && PlantCD[3] == 0 && Sun >= 300) return {4, enforce};
+    if(first != -1 && PlantCD[4] == 0 && Sun >= 300) return {5, first};
+    else if(next != -1 && PlantCD[4] == 0 && Sun >= 300) return {5, next};
+    else if(next != -1 && PlantCD[3] == 0 && Sun >= 300) return {4, next};
+    return {-1, -1};
+}
