@@ -1024,17 +1024,17 @@ plant Plant::Pepper(IPlayer* player) {
 
     int value = 1600;//在比赛开始时，降低使用辣椒的门槛，使得两个铁桶就能触发辣椒
     if (turn > 50 && !BattleField::isFullForce(player)) value = 1700;
-    else if (turn > 50 && BattleField::isFullForce(player)) value = 5999;
+    else if (turn > 50 && BattleField::isFullForce(player)) value = 4100;
 
     plant Boss = { 0,0,0, 5 };
-    for (int i = 0;i < rows;i++)
+    for (int i = 0; i < rows; i++)
     {
         if (LeftLines[i] == 0) continue;
-        int ptmp = 1150 + ForceCompare::StrongerAmount(i, player) * 100 / 10000;
+        int ptmp = 1200 - ForceCompare::StrongerAmount(i, player) / 200;
         //优先度调节，如果一格内的僵尸浓度超过总战力值的一半，优先放倭瓜，否则放辣椒
         if (ForceCompare::ForceCalculation(i, true, player) - 1200 > ForceCompare::ForceCalculation(i, false, player)
             || ForceCompare::ForceCalculation(i, true, player) > value
-            || BattleField::isManyZombies(i, 3, player))
+            || BattleField::isManyZombies(3, i, player))
             if (Boss.priority < ptmp)
                 Util::SetPlant(&Boss, i, columns - 1, ptmp, 5);//优先级应该较高
     }
@@ -1059,13 +1059,19 @@ plant Plant::Squash(IPlayer* player) {
         if (LeftLines[i] == 0) continue;
         for (int j = 0;j < columns;j++)
         {
-            int ptmp = 1150 + 200 * BattleField::DenseOfZombie(player, i, j) / 10000;//根据战力值来区分优先度
+            int ttmp = 1100;
+            if (BattleField::DenseOfZombie(player, i, j) * 2 > ForceCompare::ForceCalculation(i, true, player))
+                ttmp = 1200;
+            int ptmp = ttmp + BattleField::DenseOfZombie(player, i, j) / 200;//根据战力值来区分优先度
             int puttmp = 800;//前期使用倭瓜的门槛较低，即一个铁桶就使用
             if (turn > 200 || ForceCompare::isPlantStronger(player)) puttmp = 1200;
             if (BattleField::DenseOfZombie(player, i, j) > puttmp
                 && Boss.priority < ptmp)//取最大优先度
-                if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 6);
-                else Util::SetPlant(&Boss, i, j, ptmp, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
+                Util::SetPlant(&Boss, i, j, ptmp, 6);
+            /*
+            if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 6);
+            else Util::SetPlant(&Boss, i, j, ptmp, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
+            */
             //绝地反击，如果僵尸快打穿了
             if (j == 0 && Zombies[i][0][0] != -1 && Boss.priority < 2000)
                 Util::SetPlant(&Boss, i, 0, 2000, 6);//此地逻辑存疑，待修正
