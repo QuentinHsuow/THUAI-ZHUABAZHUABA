@@ -680,23 +680,24 @@ plant Plant::SunFlower(IPlayer* player) {
     int col = -1;
     int row = -1;
     int p = 0;
+    int colarr[4] = { 6, 4, 3, 1 };
 
     if (turn < 50) {
-        for (int j = 4; j >= 3; --j)
+        for (int j = 3; j <= 3; ++j)
             for (int i = 0; i < 5; ++i) {
                 if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
                                          2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
-                if (Plants[i][j] == 0) { row = i; col = j; p = 1300; break; }
-                if (Plants[i][j] == 0) { row = i; col = j; p = 1300; break; }
+                if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1300; break; }
+                if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1300; break; }
             }
-    }
+    }//存疑
     else if (turn < 200 && Sun > 125) {
-        for (int j = 4; j >= 3; --j)
+        for (int j = 2; j <= 3; ++j)
             for (int i = 0; i < 5; ++i) {
                 if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
                                          2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
-                if (Plants[i][j] == 0) { row = i; col = j; p = 1000; break; }
-                if (Plants[i][j] == 0) { row = i; col = j; p = 1000; break; }
+                if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1000; break; }
+                if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1000; break; }
             }
     }
     else if (ForceCompare::isPlantStronger(player)) {
@@ -713,11 +714,20 @@ plant Plant::SunFlower(IPlayer* player) {
                                      2 * ForceCompare::ForceCalculation(i, true, player)) continue;
             if (Plants[i][4] == 0) { row = i; col = 4; p = 1150; break; }
             if (Plants[i][tmp] == 0) { row = i; col = tmp; p = 1150; break; }
-            if (Plants[i][7] == 0 && turn < 500)
+            bool mflag = true;
+            for (int m = 0; m < 5; ++m)
+            {
+                if (LeftLines[m] == 0) break;
+                if (ForceCompare::ForceCalculation(m, true, player) != 0) { mflag = false; break; }
+            }
+            if (Plants[i][7] == 0 && turn < 1400 && mflag)
             {
                 bool flag = true;
                 for (int j = 0; j < 5; j++)
-                    if (Plants[j][2] != 2) flag = false;//前500回，如果种了一列寒冰，就在第七行种植临时的向日葵
+                {
+                    if (LeftLines[j] == 0) break;
+                    if (Plants[j][1] != 2) flag = false;//前500回，如果种了一列寒冰，就在第七行种植临时的向日葵
+                }
                 if (flag) { row = i; col = 7; p = 1150; break; }
             }
         }
@@ -749,7 +759,7 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
     }
     else// 有余力时，摆满三列
     {
-        int tmp[5] = { 2, 0, 1, 3, 5 };
+        int tmp[5] = { 1, 2, 0, 3, 5 };
         for (int j = 4; j >= 0; j--)
             for (int i = 4; i >= 0; --i) {
                 if (LeftLines[i] == 0) continue;
@@ -757,6 +767,17 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
                 {
                     row = i;
                     col = tmp[j];
+                    p = 550;
+                }
+            }
+        if( Sun > 4000 )
+            for (int i = 4; i >= 0; --i)
+            {
+                if (LeftLines[i] == 0) continue;
+                if (Plants[i][4] != 2)
+                {
+                    row = i;
+                    col = 4;
                     p = 550;
                 }
             }
@@ -838,23 +859,22 @@ plant Plant::PeaShooter(IPlayer* player) {
         }
         if (i == N) p = 0;
         if (Plants[row][0] == 0) col = 0;
-        else if (Plants[row][1] == 0) col = 1;
+        else if (Plants[row][1] == 0) col = 2;
         else col = -1;//没地方种了，以后可以在这里加入铲子
     }
     else if (ForceCompare::isPlantStronger(player) && turn > 50)// 有余力时，摆满一列
     {
-        for (int j = 1; j >= 0; j--)
-            for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 5; i++)
+        {
+            if (LeftLines[i] == 0) continue;
+            if (Plants[i][1] == 0 || Plants[i][1] == 4)//铲坚果墙
             {
-                if (LeftLines[i] == 0) continue;
-                if (Plants[i][j] == 0 || Plants[i][j] == 4)//铲坚果墙
-                {
-                    row = i;
-                    col = j;
-                    p = 600;
-                    break;
-                }
+                row = i;
+                col = 1;
+                p = 600;
+                break;
             }
+        }
     }
     if (PlantCD[2] != 0 || Sun < 100 || col == -1 || Sun > 1000) p = 0;
     if (BattleField::isAnySunflower(player) && Sun < 150) p = 0;//留足够的阳光种植向日葵
@@ -886,7 +906,7 @@ plant Plant::SmallNut(IPlayer* player) {
         }
     }
     */
-    if(turn >= 200)
+    if (turn >= 200)
     {
         //在战斗后期，自动补齐坚果墙
         for (int i = 0; i < rows; i++)
@@ -1123,7 +1143,7 @@ int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
             // 否则就在没有建国或者没有豌豆并且向日葵最多的地方放普僵
 
             if(SunFlowerNum[i] >= max){
-                if((row != -1 && NutNum[i] + PeaNum[i]<= NutNum[row] + PeaNum[row] && NorNum[i] >= NorNum[row] && NorNum[i] <= 2) || row == -1) {
+                if( row == -1 || (row != -1 && NutNum[i] + PeaNum[i]<= NutNum[row] + PeaNum[row] && NorNum[i] >= NorNum[row] && NorNum[i] <= 2) ) {
                     max = SunFlowerNum[i];
                     row = i;
                 }
