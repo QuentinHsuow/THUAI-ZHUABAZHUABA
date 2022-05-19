@@ -662,7 +662,7 @@ zombie Util::GetBestZombie(IPlayer *player){
     }
     else if(turn >= 700 && turn < 980 ){
         if (!ZombieStage::isStageTwo(player)) return Zombie::Assault(player);
-        else if (ZombieStage::isStageTwo(player) && !ZombieStage::isStageThree(player))return Zombie::Wait(player);
+        else if (ZombieStage::isStageTwo(player))return Zombie::Wait(player);
     }
     else if ((turn >= 550 && turn < 700) || (turn >= 1050 && turn < 1400) || turn >= 1550){
         return Zombie::NextWave(player);
@@ -1047,14 +1047,14 @@ bool ZombieStage::isStageTwo(IPlayer *player) {
     return greater >= LeftLineNumber-1;
 }
 bool ZombieStage::isStageThree(IPlayer* player){
-    // 有LeftLine-1行都有2个寒冰了
+    // 有LeftLine-1行都有3个寒冰了
     int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
     int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i)
-        if(NumWinter[i] >= 2) greater++;
-    return greater >= LeftLineNumber-1;
+        if(NumWinter[i] >= 3) greater++;
+    return greater >= LeftLineNumber;
 }
 bool ZombieStage::isStageFour(IPlayer *player) {
     // 有LeftLine行都有5个寒冰了
@@ -1286,6 +1286,7 @@ zombie Zombie::Assault(IPlayer *player) {
 }
 zombie Zombie::Wait(IPlayer *player) {
     // 唯一的目标是连续放两个g和一个冰车
+    /*
     int* PlantCD = player->Camp->getPlantCD();
     int Sun = player->Camp->getSun();
     int turn = player->getTime();
@@ -1299,7 +1300,7 @@ zombie Zombie::Wait(IPlayer *player) {
     if(Sun > SumSun + 700 && Sun > 700) return {5, WRow};
     if(WhereG != -1 && PlantCD[4] != 0 && Sun > SumSun + 100 && Sun > 300) return {ZombieUtil::SledOrIron(WRow, player), WRow};
     if(WhereG != -1 && PlantCD[4] == 0 && Sun > SumSun + 100 && Sun > 300) return {5, WRow};
-
+    */
     return {-1, -1};
 }
 zombie Zombie::ZombieWave2(IPlayer *player) {
