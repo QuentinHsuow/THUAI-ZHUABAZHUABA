@@ -131,15 +131,6 @@ namespace BattleField {
     bool *SquashFirstArray(IPlayer *player);
 
     /*************************************************************************
-   【函数名称】 WherePlantType
-   【函数功能】
-   【参数】 \
-   【返回值】 -1 都有， [0,4]没有的行数
-   【修改记录】5.6添加函数,5.14改成两个函数
-    *************************************************************************/
-    int WherePlantType(int type, IPlayer* player);
-
-    /*************************************************************************
    【函数名称】 WhereZombieType
    【函数功能】
    【参数】 \
@@ -311,6 +302,8 @@ namespace ZombieUtil{
    【修改记录】
    *************************************************************************/
     int getLeftLineNumZom(IPlayer* player);
+
+    int SledOrIron(int row, IPlayer* player);
 }
 
 namespace ZombieStage{
@@ -580,18 +573,6 @@ bool* BattleField::SquashFirstArray(IPlayer* player){
         else arr[i] = false;
     }
     return arr;
-}
-int BattleField::WherePlantType(int type, IPlayer *player) {
-    int* NumType = NumPlantArray(type, player);
-    int* LeftLines = player->Camp->getLeftLines();
-    int** Plants = player->Camp->getCurrentPlants();
-    int cols = player->Camp->getColumns();
-    for(int i = 0; i < 5; ++i){
-        if(LeftLines[i] == 0) continue;
-        if(NumType[i] != 0) return i;
-    }
-    delete[] NumType;
-    return -1;
 }
 int BattleField::WhereZombieType(int type, IPlayer *player) {
     int* NumType = NumZombieArray(type, player);
@@ -920,7 +901,7 @@ plant Plant::SmallNut(IPlayer* player) {
         for (int i = 0; i < rows; i++)
         {
             if (LeftLines[i] == 0) continue;
-            int ptmp = 1150 - (j - 7) * 5 - ForceCompare::StrongerAmount(i, player) / 100;//种植坚果的比较机制
+            int ptmp = 1150 - (j - 9) * 5 - ForceCompare::StrongerAmount(i, player) / 50;//种植坚果的比较机制
             if (Zombies[i][j][0] != -1 && Boss.priority < ptmp && Plants[i][j] == 0) {//如果僵尸攻入了内地
                 if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 4);
                 else Util::SetPlant(&Boss, i, j, ptmp, 4);
@@ -1134,18 +1115,17 @@ int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
                 if(row == -1 ||( row != -1 && (SunFlowerNum[i] > SunFlowerNum[row])) ) row = i;
             }
         }
-    }//turn == 3
+    }//turn == 2
 
     else{
         for(int i = 0; i < 5; ++i){
             if(LeftLines[i] == 0) continue;
             // 否则就在没有建国或者没有豌豆并且向日葵最多的地方放普僵
-            if(NutNum[i] == 0 || PeaNum[i] == 0){
-                if(SunFlowerNum[i] >= max){
-                    if((row != -1 && NutNum[i] + PeaNum[i] < NutNum[row] + PeaNum[row]) || row == -1) {
-                        max = SunFlowerNum[i];
-                        row = i;
-                    }
+
+            if(SunFlowerNum[i] >= max){
+                if((row != -1 && NutNum[i] + PeaNum[i]<= NutNum[row] + PeaNum[row] && NorNum[i] >= NorNum[row] && NorNum[i] <= 2) || row == -1) {
+                    max = SunFlowerNum[i];
+                    row = i;
                 }
             }
         }
@@ -1170,34 +1150,13 @@ int ZombieUtil::StartBestPositionBucket(IPlayer *player) {
     int row = -1;
     int max = 0;
 
-    // 找有向日葵的一行放
-    if(turn == 2) {
-        for (int i = 0; i < 5; ++i) {
-            if (LeftLines[i] == 0) continue;
-            if (SunFlowerNum[i] != 0) row = i;
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
+        if(SunFlowerNum[i] >= max && (row == -1 || (row != -1 && NutNum[i] + PeaNum[i] < NutNum[row] + PeaNum[row]))){
+            max = SunFlowerNum[i];
+            row = i;
         }
-        if(row == -1){
-            for(int i = 0; i < 5; ++i){
-                if(LeftLines[i] == 0) continue;
-                if(NutNum[i] == 0 && PeaNum[i] == 0) row = i;
-            }
-        }
-    }// turn == 1
-
-
-    else{
-        for(int i = 0; i < 5; ++i){
-            if(LeftLines[i] == 0) continue;
-            if(SunFlowerNum[i] == max && NutNum[i] + PeaNum[i] < NutNum[row] + PeaNum[row]){
-                max = SunFlowerNum[i];
-                row = i;
-            }
-            else if(SunFlowerNum[i] > max) {
-                max = SunFlowerNum[i];
-                row = i;
-            }
-        } // row-loop
-    }
+    } // row-loop
 
     delete[] SunFlowerNum;
     delete[] NutNum;
@@ -1227,7 +1186,7 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
                 if( row == -1 ||( row != -1 &&(SunFlowerNum[i] > SunFlowerNum[row])))row = i;
             }
         }
-    }//turn == 5
+    }//turn == 4
 
     delete[] PeaNum;
     delete[] IronNum;
@@ -1283,6 +1242,19 @@ int ZombieUtil::getLeftLineNumZom(IPlayer *player) {
         if(LeftLines[i] == 1) left++;
     return left;
 }
+int ZombieUtil::SledOrIron(int row, IPlayer *player) {
+    int** Plant = player->Camp->getCurrentPlants();
+    int cols = player->Camp->getColumns();
+    int Sun = player->Camp->getSun();
+
+    bool isIron = true;
+    for(int i = cols-1; i >= cols-4; --i)
+        if(Plant[row][i] != 0) isIron = false;
+
+    if(Sun > 1500) isIron = false;
+    if(isIron) return 2;
+    else return 4;
+}
 zombie Zombie::Start(IPlayer *player){
     int turn = player->getTime();
     int Sun = player->Camp->getSun();
@@ -1291,12 +1263,11 @@ zombie Zombie::Start(IPlayer *player){
     int rowBucket = ZombieUtil::StartBestPositionBucket(player);
     int rowPole = ZombieUtil::StartBestPositionPole(player);
 
-    // 前期的特定操作
-    //if(turn == 2 && rowBucket != -1) return {2, rowBucket};
+    // 第二回合放一个普僵，第四会和放一个撑杆跳
     if(turn == 2 && rowNormal != -1) return{1, rowNormal};
     if(turn == 4 && rowPole != -1) return{3, rowPole};
 
-    // 从第十回合开始
+    // 从第六回合开始，主要放普僵，尽量连续放两个
     if(turn > 6){
         if(rowBucket != -1 && PlantCD[1] == 0 && Sun > 115) return {2, rowBucket};
         if(rowNormal != -1 && PlantCD[0] == 0) return {1, rowNormal};
@@ -1324,9 +1295,10 @@ zombie Zombie::Wait(IPlayer *player) {
     else if(turn < 800) SumSun -= 1000 + (800 - turn) * 4;
     else if(turn < 1000) SumSun -= (1000 - turn) * 5;
 
-    if(Sun > SumSun + 700 && Sun > 700) return {5, ForceCompare::WeakestRow(player)};
-    if(WhereG != -1 && PlantCD[4] != 0 && Sun > SumSun + 100 && Sun > 300) return {4, ForceCompare::WeakestRow(player)};
-    if(WhereG != -1 && PlantCD[4] == 0 && Sun > SumSun + 100 && Sun > 300) return {5, ForceCompare::WeakestRow(player)};
+    int WRow = ForceCompare::WeakestRow(player);
+    if(Sun > SumSun + 700 && Sun > 700) return {5, WRow};
+    if(WhereG != -1 && PlantCD[4] != 0 && Sun > SumSun + 100 && Sun > 300) return {ZombieUtil::SledOrIron(WRow, player), WRow};
+    if(WhereG != -1 && PlantCD[4] == 0 && Sun > SumSun + 100 && Sun > 300) return {5, WRow};
 
     return {-1, -1};
 }
@@ -1373,7 +1345,7 @@ zombie Zombie::NextWave(IPlayer *player) {
     int min = 100;
     for(int i = 0; i < 5; ++i){
         if(LeftLines[i] == 0) continue;
-        if(WinterNum[i] <= 1 && PeaNum[i] < 2){
+        if(WinterNum[i] < 2 && PeaNum[i] < 2){
             if(WinterNum[i] < min){
                 min = WinterNum[i];
                 row = i;
@@ -1387,7 +1359,7 @@ zombie Zombie::NextWave(IPlayer *player) {
     int WRow = ForceCompare::WeakestRow(player);
     if ((WhereG != -1 || row != -1 || WhereS != -1 || turn > 1550) && Sun > 300 && WRow != -1) {
         if(PlantCD[4] == 0) return {5, WRow};
-        else if(PlantCD[3] == 0 && Sun > 300) return{4, WRow};
+        else if(PlantCD[3] == 0 && Sun > 300) return{ZombieUtil::SledOrIron(WRow, player), WRow};
     }
     return {-1, -1};
 }
