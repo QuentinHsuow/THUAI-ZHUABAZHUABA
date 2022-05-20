@@ -11,6 +11,9 @@ struct plant {
     int col;
     int priority;
     int type;
+    plant(): row(0), col(0), priority(0), type(0) {}
+    plant(int r, int c, int p, int t): row(r), col(c), priority(p), type(t) {}
+    plant(const plant& p) = default;
 };
 
 /* 僵尸结构体
@@ -165,6 +168,8 @@ namespace BattleField {
    【修改记录】
     *************************************************************************/
     bool isManyZombies(int num, int row, IPlayer* player);
+
+    int* SquashFrontArray(IPlayer* player);
 }
 
 
@@ -285,6 +290,8 @@ namespace ZombieUtil{
     *************************************************************************/
     int BestDistribution(IPlayer* player);
 
+    int BestWave(IPlayer* player);
+
     /*************************************************************************
    【函数名称】
    【函数功能】 判断是否停止送人头
@@ -397,6 +404,8 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
 
+    if(LeftLines[row] == 0 || row < 0 || row > 4) return 0;
+
     int sum = 0;
     int planttmp[3][11] = { 0 };//临时存储植物的数量和列数，第一个元素代表个数，后面的代表种植该植物的列数
     int zombietmp[5] = { 0 };//临时存储僵尸的数量
@@ -452,7 +461,7 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
             for (int i = 0; i < 3; ++i)
                 allZombieNum += zombietmp[i];// 计算僵尸总量
             if(allZombieNum != 0)
-                sum += 530 * planttmp[2][0] * (1 - 1 / allZombieNum);//存在撑杆僵尸，坚果墙将会被削弱
+                sum += 530 * planttmp[2][0] * (1.0 - 1.0 / allZombieNum);//存在撑杆僵尸，坚果墙将会被削弱
             if (planttmp[1][0] == 0 && planttmp[0][0] == 0 ) sum = 100 * planttmp[2][0];//如果没有豌豆掩护，坚果用处降低
         }
         //寒冰射手
@@ -568,12 +577,14 @@ int* BattleField::NumPlantArray(int type, IPlayer *player) {
     return arr;
 }
 bool* BattleField::SquashFirstArray(IPlayer* player){
+    int* LeftLines = player->Camp->getLeftLines();
     int** Plants = player->Camp->getCurrentPlants();
     int cols = player->Camp->getColumns();
     int* GArr = NumZombieArray(5, player);
     int* SArr = NumZombieArray(4, player);
     bool* arr = new bool[5];
     for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) {arr[i] = false; continue;}
         if((Plants[i][cols-1] == 6 || (Plants[i][cols-2] == 6 && Plants[i][cols-1] == 0)) && (SArr[i] != 0 || GArr[i] != 0)) arr[i] = true;
         else arr[i] = false;
     }
@@ -590,7 +601,11 @@ int BattleField::WhereZombieType(int type, IPlayer *player) {
     int cols = player->Camp->getColumns();
     for(int i = 0; i < 5; ++i){
         if(LeftLines[i] == 0) continue;
-        if(NumType[i] != 0) return i;
+        if(NumType[i] != 0) {
+            delete[] NumType;
+            NumType = nullptr;
+            return i;
+        }
     }
     delete[] NumType;
     NumType = nullptr;
@@ -626,8 +641,9 @@ bool BattleField::isFullForce(IPlayer* player)
 bool BattleField::isManyZombies(int num, int row, IPlayer* player)
 {
     int*** Zombies = player->Camp->getCurrentZombies();
+    int cols = player->Camp->getColumns();
     int count = 0;
-    for (int j = 0; j < 10; j++)
+    for (int j = 0; j < cols; j++)
     {
         for (int k = 0; Zombies[row][j][k] != -1; ++k)
         {
@@ -637,6 +653,9 @@ bool BattleField::isManyZombies(int num, int row, IPlayer* player)
     }
     return false;
 }
+/*int *BattleField::SquashFrontArray(IPlayer *player) {
+    int** Plants = player->Camp->
+}*/
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -646,6 +665,8 @@ void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 }
 plant Util::GetBestPlant(IPlayer *player) {
     plant arr[6];
+    for (int i = 0; i < 6; i++)
+        arr[i] = { 0, 0, 0, i + 1 };
     arr[0] = Plant::SunFlower(player);
     arr[1] = Plant::WinterPeaShooter(player);
     arr[2] = Plant::PeaShooter(player);
@@ -729,7 +750,7 @@ plant Plant::SunFlower(IPlayer* player) {
             bool mflag = true;
             for (int m = 0; m < 5; ++m)
             {
-                if (LeftLines[m] == 0) break;
+                if (LeftLines[m] == 0) continue;
                 if (ForceCompare::ForceCalculation(m, true, player) != 0) { mflag = false; break; }
             }
             if (Plants[i][7] == 0 && turn < 1400 && mflag)
@@ -737,7 +758,7 @@ plant Plant::SunFlower(IPlayer* player) {
                 bool flag = true;
                 for (int j = 0; j < 5; j++)
                 {
-                    if (LeftLines[j] == 0) break;
+                    if (LeftLines[j] == 0) continue;
                     if (Plants[j][1] != 2) flag = false;//前500回，如果种了一列寒冰，就在第七行种植临时的向日葵
                 }
                 if (flag) { row = i; col = 7; p = 1150; break; }
@@ -747,7 +768,7 @@ plant Plant::SunFlower(IPlayer* player) {
 
     if (Sun < 50) p = 0;
     if (PlantCD[0] != 0) p = 0;
-    if (col == -1 || row == -1) return { 0, 0, 0 };
+    if (col == -1 || row == -1) return { 0, 0, 0, 0 };
     else return { row, col, p, 1 };
 }
 plant Plant::WinterPeaShooter(IPlayer* player) {
@@ -1307,6 +1328,9 @@ int ZombieUtil::BestDistribution(IPlayer *player) {
 
     return row;
 }
+/*int ZombieUtil::BestWave(IPlayer *player) {
+    int* StrongerArr = ForceCompare::StrongerArray(player);
+}*/
 int ZombieUtil::AvoidSquash(IPlayer* player){
     bool* SquashArr = BattleField::SquashFirstArray(player);
     int* LeftLines = player->Camp->getLeftLines();
@@ -1315,7 +1339,7 @@ int ZombieUtil::AvoidSquash(IPlayer* player){
     int min = 100000;
     for(int i = 0; i < 5; ++i){
         if(LeftLines[i] == 0) continue;
-        if(SquashArr[i] != 0 && StrArr[i] < min){
+        if(SquashArr[i] && StrArr[i] < min){
             min = StrArr[i];
             row = i;
         }
