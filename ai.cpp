@@ -1125,7 +1125,6 @@ bool ZombieStage::isStageOne(IPlayer *player) {
 bool ZombieStage::isStageTwo(IPlayer *player) {
     // 有LeftLine-1行都有一个寒冰或者2个豌豆了
     int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
-    int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int* NumPea = BattleField::NumPlantArray(3, player);
     int greater = 0;
@@ -1140,7 +1139,6 @@ bool ZombieStage::isStageTwo(IPlayer *player) {
 bool ZombieStage::isStageThree(IPlayer* player){
     // 有LeftLine-1行都有3个寒冰了
     int LeftLineNumber = ZombieUtil::getLeftLineNumZom(player);
-    int turn = player->getTime();
     int* NumWinter = BattleField::NumPlantArray(2, player);
     int greater = 0;
     for(int i = 0; i < 5; ++i)
@@ -1166,8 +1164,10 @@ int ZombieUtil::BestAssault(IPlayer *player) {
     int* IronNum = BattleField::NumZombieArray(2, player);
     int* NorNum = BattleField::NumZombieArray(1, player);
     int Arr[5];
-    for(int i = 0; i < 5; ++i)
-        Arr[i] = PeaNum[i] + 4 * WinterNum[i] + NutNum[i] - 2 * IronNum[i] - NorNum[i];
+    for(int i = 0; i < 5; ++i) {
+        if(LeftLines[i] == 0) Arr[i] = 0;
+        else Arr[i] = PeaNum[i] + 4 * WinterNum[i] + NutNum[i] - 2 * IronNum[i] - NorNum[i];
+    }
 
     int row = -1;
     int min = 100;
@@ -1221,11 +1221,9 @@ int ZombieUtil::StartBestPositionNormal( IPlayer *player) {
             if(LeftLines[i] == 0) continue;
             // 否则就在没有建国或者没有豌豆并且向日葵最多的地方放普僵
             int N = 2 * PeaNum[i] + 3 * NutNum[i] - SunFlowerNum[i];
-            if(N < min){
-                if((row == -1  || (row != -1 && NutNum[i] + PeaNum[i]<= NutNum[row] + PeaNum[row] && NorNum[i] >= NorNum[row]))&& NorNum[i] <= 2 ) {
-                    min = N;
-                    row = i;
-                }
+            if(N < min && NorNum[i] <= 2){
+                min = N;
+                row = i;
             }
         }
     }
@@ -1288,7 +1286,7 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
     int* SunFlowerNum = BattleField::NumPlantArray(1, player);
     int row = -1;
 
-    // 在第三回合的特殊判断
+    // 在第四回合的特殊判断
     if(turn == 4) {
         for (int i = 0; i < 5; ++i) {
             // 跳过空行
@@ -1315,6 +1313,7 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
     return row;
 }
 int ZombieUtil::BestDistribution(IPlayer *player) {
+    int* LeftLines = player->Camp->getLeftLines();
     int* GagNum = BattleField::NumZombieArray(5, player);
     int* SleNum = BattleField::NumZombieArray(4, player);
     int* WinterNum = BattleField::NumPlantArray(2, player);
@@ -1322,9 +1321,10 @@ int ZombieUtil::BestDistribution(IPlayer *player) {
     for(int i = 0; i < 5; ++i) ZomNum[i] = GagNum[i] + SleNum[i];
 
     int row = -1;
-    int min = 6;
+    int min = 100;
 
     for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) continue;
         if(ZomNum[i] == 0){
             if(WinterNum[i] < min){
                 min = WinterNum[i];
