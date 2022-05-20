@@ -391,7 +391,7 @@ void player_ai(IPlayer* player)
                     if ((Plants[i][j] == 1 || Plants[i][j] == 2 || Plants[i][j] == 3) && j <= 8 && LeftLines[i] != 0)
                         for (int k = 0; Zombies[i][j + 1][k] != -1; ++k)
                             if (Zombies[i][j + 1][k] == 4 || Zombies[i][j + 1][k] == 5) {
-                                player->removePlant(i, j + 1);
+                                player->removePlant(i, j);
                                 break;
                             }
         }
@@ -1108,6 +1108,7 @@ plant Plant::Pepper(IPlayer* player) {
     int Sun = player->Camp->getSun();
     int turn = player->getTime();
     int* arr = BattleField::NumPlantArray(2, player);
+    int*** Zombies = player->Camp->getCurrentZombies();
 
     int value = 1600;//在比赛开始时，降低使用辣椒的门槛，使得两个铁桶就能触发辣椒
     if (turn > 50 && !BattleField::isFullForce(player)) value = 1700;
@@ -1119,9 +1120,11 @@ plant Plant::Pepper(IPlayer* player) {
         if (LeftLines[i] == 0) continue;
         int ptmp = 1200 - ForceCompare::StrongerAmount(i, player) / 200;
         //优先度调节，如果一格内的僵尸浓度超过总战力值的一半，优先放倭瓜，否则放辣椒
+        int ntmp = 3;
+        if (turn < 200 && Sun >= 150 && ( Zombies[i][1][0] != -1 || Zombies[i][0][0] != -1) ) ntmp = 2;
         if (ForceCompare::ForceCalculation(i, true, player) - 1200 > ForceCompare::ForceCalculation(i, false, player)
             || ForceCompare::ForceCalculation(i, true, player) > value
-            || BattleField::isManyZombies(3, i, player))
+            || BattleField::isManyZombies(ntmp, i, player))
             if (Boss.priority < ptmp)
                 Util::SetPlant(&Boss, i, columns - 1, ptmp, 5);//优先级应该较高
     }
