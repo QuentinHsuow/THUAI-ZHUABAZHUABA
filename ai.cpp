@@ -170,6 +170,10 @@ namespace BattleField {
     bool isManyZombies(int num, int row, IPlayer* player);
 
     bool* SquashFrontArray(IPlayer* player);
+
+    bool whetherPlace(int row, int col, IPlayer* player);
+
+    int* SortedArr(IPlayer* player);
 }
 
 
@@ -375,6 +379,22 @@ void player_ai(IPlayer* player)
 
     if (Type == 0)//植物方
     {
+        int** Plants = player->Camp->getCurrentPlants();
+        int*** Zombies = player->Camp->getCurrentZombies();
+        int* LeftLines = player->Camp->getLeftLines();
+        int Sun = player->Camp->getSun();
+        int turn = player->getTime();
+        if (turn >= 1500)
+        {
+            for (int j = 9; j >= 0; --j)
+                for (int i = 4; i >= 0; --i)
+                    if ((Plants[i][j] == 1 || Plants[i][j] == 2 || Plants[i][j] == 3) && j <= 8 && LeftLines[i] != 0)
+                        for (int k = 0; Zombies[i][j + 1][k] != -1; ++k)
+                            if (Zombies[i][j + 1][k] == 4 || Zombies[i][j + 1][k] == 5) {
+                                player->removePlant(i, j + 1);
+                                break;
+                            }
+        }
         plant pt = Util::GetBestPlant(player);
         Plant::RemovePeaShooter(player, pt);
         if (pt.priority > 0) player->PlacePlant(pt.type, pt.row, pt.col);
@@ -671,6 +691,67 @@ bool *BattleField::SquashFrontArray(IPlayer *player) {
     }
     return squash_arr;
 }
+int *BattleField::SortedArr(IPlayer *player){
+    int rows = player->Camp->getRows();
+    int columns = player->Camp->getColumns();
+    int turn = player->getTime();
+    int BrokenLinesScore = player->getBrokenLinesScore();
+    int N = player->getNotBrokenLines();
+    int KillPlantsScore = player->getKillPlantsScore();
+    int KillZombiesScore = player->getKillZombiesScore();
+    int LeftPlants = player->getLeftPlants();
+    int Score = player->getScore();
+    int* PlantCD = player->Camp->getPlantCD();
+    int** Plants = player->Camp->getCurrentPlants();
+    int*** Zombies = player->Camp->getCurrentZombies();
+    int* LeftLines = player->Camp->getLeftLines();
+    int Sun = player->Camp->getSun();
+
+    int* arr = new int[N];
+    int* arrRow = new int[N];
+    for (int i = 0; i < N; i++)
+    {
+        arr[i] = 0;
+        arrRow[i] = 0;
+    }
+    int tmpaccount = 0;
+    for (int i = 0; i < 5; i++)
+        if (LeftLines[i] != 0)
+        {
+            arr[tmpaccount] = ForceCompare::StrongerAmount(i, player);
+            arrRow[tmpaccount] = i;
+            tmpaccount++;
+        }
+    for (int i = 0; i < N - 1; i++)
+        for (int j = 0; j < N - 1 - i; j++)
+        {
+            if (arr[j + 1] < arr[j])
+            {
+                int tmparr = 0;
+                int tmp = 0;
+                tmparr = arr[j]; arr[j] = arr[j + 1]; arr[j + 1] = tmparr;
+                tmp = arrRow[j + 1]; arrRow[j + 1] = arrRow[j]; arrRow[j] = tmp;
+    }
+        }//将strongarray排序
+
+    delete[] arr;
+    arr = nullptr;
+
+    return arrRow;
+}
+bool BattleField::whetherPlace(int row, int col, IPlayer* player)
+{
+    int** Plants = player->Camp->getCurrentPlants();
+    int*** Zombies = player->Camp->getCurrentZombies();
+
+    if (col == 9) return false;
+    else {
+        for (int k = 0; Zombies[row][col + 1][k] != -1; ++k)
+            if (Zombies[row][col + 1][k] == 4 || Zombies[row][col + 1][k] == 5
+                || Zombies[row][col][k] == 4 || Zombies[row][col][k] == 5) return false;
+    }
+    return true;
+}
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -734,18 +815,20 @@ plant Plant::SunFlower(IPlayer* player) {
         for (int j = 3; j <= 3; ++j)
             for (int i = 0; i < 5; ++i) {
                 if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
-                                         2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
+                    2 * ForceCompare::ForceCalculation(i, true, player)
+                    || !BattleField::whetherPlace(i, j, player) ) continue;//如果一行产生威胁，就不种向日葵
                 if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1300; break; }
                 if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1300; break; }
             }
     }//存疑
-    else if (turn < 200 && Sun > 125) {
+    else if (turn < 200) {
         for (int j = 2; j <= 3; ++j)
             for (int i = 0; i < 5; ++i) {
                 if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
-                                         2 * ForceCompare::ForceCalculation(i, true, player)) continue;//如果一行产生威胁，就不种向日葵
-                if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1000; break; }
-                if (Plants[i][ (colarr[j]) ] == 0) { row = i; col = colarr[j]; p = 1000; break; }
+                    2 * ForceCompare::ForceCalculation(i, true, player)
+                    || !BattleField::whetherPlace(i, j, player)) continue;//如果一行产生威胁，就不种向日葵
+                if (Plants[i][(colarr[j])] == 0) { row = i; col = colarr[j]; p = 1000; break; }
+                if (Plants[i][(colarr[j])] == 0) { row = i; col = colarr[j]; p = 1000; break; }
             }
     }
     else if (ForceCompare::isPlantStronger(player)) {
@@ -760,8 +843,8 @@ plant Plant::SunFlower(IPlayer* player) {
         for (int i = 0; i < 5; ++i) {
             if (LeftLines[i] == 0 || ForceCompare::ForceCalculation(i, false, player) <
                                      2 * ForceCompare::ForceCalculation(i, true, player)) continue;
-            if (Plants[i][4] == 0) { row = i; col = 4; p = 1150; break; }
-            if (Plants[i][tmp] == 0) { row = i; col = tmp; p = 1150; break; }
+            if (Plants[i][4] == 0 && BattleField::whetherPlace(i, 4, player)) { row = i; col = 4; p = 1150; break; }
+            if (Plants[i][tmp] == 0 && BattleField::whetherPlace(i, tmp, player)) { row = i; col = tmp; p = 1150; break; }
             bool mflag = true;
             for (int m = 0; m < 5; ++m)
             {
@@ -776,7 +859,7 @@ plant Plant::SunFlower(IPlayer* player) {
                     if (LeftLines[j] == 0) continue;
                     if (Plants[j][1] != 2) flag = false;//前500回，如果种了一列寒冰，就在第七行种植临时的向日葵
                 }
-                if (flag) { row = i; col = 7; p = 1150; break; }
+                if (flag && BattleField::whetherPlace(i, 7, player)) { row = i; col = 7; p = 1150; break; }
             }
         }
     }
@@ -792,6 +875,8 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
     int Sun = player->Camp->getSun();
     int** Plants = player->Camp->getCurrentPlants();
     int* LeftLines = player->Camp->getLeftLines();
+    int N = player->getNotBrokenLines();
+    int* sorted = BattleField::SortedArr(player);
 
     int p = 0;
     int row = 0;
@@ -800,18 +885,22 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
     if (!ForceCompare::isPlantStronger(player))//如果阳光比较少，节约一点
     {
         p = 900;
-        row = ForceCompare::WeakestRow(player);
+        for (int i = 0; i < N; ++i)
+            if (BattleField::whetherPlace(sorted[i], 4, player))
+            {
         if (Plants[row][0] == 0) col = 0;
         else if (Plants[row][2] == 0) col = 2;
         else col = -1;//没地方种了
+                break;
+            }
     }
     else// 有余力时，摆满三列
     {
-        int tmp[5] = { 1, 2, 0, 3, 5 };
+        int tmp[5] = { 2, 1, 0, 3, 5 };
         if (Sun > 5000)
             for (int i = 4; i >= 0; --i)
             {
-                if (LeftLines[i] == 0) continue;
+                if (LeftLines[i] == 0 || !BattleField::whetherPlace(i, 4, player)) continue;
                 if (Plants[i][4] != 2)
                 {
                     row = i;
@@ -821,7 +910,7 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
             }
         for (int j = 4; j >= 0; j--)
             for (int i = 4; i >= 0; --i) {
-                if (LeftLines[i] == 0) continue;
+                if (LeftLines[i] == 0 || !BattleField::whetherPlace(i, tmp[j], player)) continue;
                 if (Plants[i][tmp[j]] != 2)
                 {
                     row = i;
@@ -831,7 +920,7 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
             }
         for (int j = 4; j >= 0; --j)
             {
-            if (LeftLines[j] == 0) continue;
+            if (LeftLines[j] == 0 || !BattleField::whetherPlace(j, 0, player)) continue;
             if (Plants[j][0] == 0)
                 {
                 row = j;
@@ -842,6 +931,7 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
     }
     if (PlantCD[1] != 0 || Sun < 500 || col == -1) p = 0;
     if (BattleField::isAnySunflower(player) && Sun < 450) p = 0;//留足够的阳光种植向日葵
+    delete[] sorted;
     return { row, col, p, 2 };
 }
 plant Plant::PeaShooter(IPlayer* player) {
@@ -909,7 +999,8 @@ plant Plant::PeaShooter(IPlayer* player) {
             for (j = 0; j < tmpj; ++j)
                 if (Zombies[(arrRow[i])][j][0] != -1)
                     break;
-            if (j == tmpj || ForceCompare::ForceCalculation(arrRow[i], false, player) != 0)
+            if (j == tmpj || ForceCompare::ForceCalculation(arrRow[i], false, player) != 0
+                && BattleField::whetherPlace(arrRow[i], 2, player))
             {
                 row = arrRow[i];
                 break;
@@ -972,7 +1063,7 @@ plant Plant::SmallNut(IPlayer* player) {
         for (int i = 4; i >= 0; --i)
         {
             if (LeftLines[i] == 0) continue;
-            if (Plants[i][columns - 1] == 0 && Sun > 450 && LeftLines[i] == 1)//如果有多余阳光，且没有被攻破,则补齐一行坚果墙
+            if (Plants[i][columns - 1] == 0 && Sun > 450 && LeftLines[i] == 1 && turn < 1500)//如果有多余阳光，且没有被攻破,则补齐一行坚果墙
                 Util::SetPlant(&Boss, i, columns - 1, 800, 4);
         }
     }
@@ -1064,13 +1155,9 @@ plant Plant::Squash(IPlayer* player) {
             if (BattleField::DenseOfZombie(player, i, j) > puttmp
                 && Boss.priority < ptmp)//取最大优先度
                 Util::SetPlant(&Boss, i, j, ptmp, 6);
-            /*
-            if (j > 1 && Plants[i][j - 1] == 0) Util::SetPlant(&Boss, i, j - 1, ptmp, 6);
-            else Util::SetPlant(&Boss, i, j, ptmp, 6);//碰到一大坨僵尸且一行没有足够的战力时的的优先度,优先级应次于添加攻击性植物
-            */
             //绝地反击，如果僵尸快打穿了
             if (j == 0 && Zombies[i][0][0] != -1 && Boss.priority < 2000)
-                Util::SetPlant(&Boss, i, 0, 2000, 6);//此地逻辑存疑，待修正
+                Util::SetPlant(&Boss, i, 0, 3000, 6);//此地逻辑存疑，待修正
         }
     }
     if (ForceCompare::isPlantStronger(player))//倭瓜长城
@@ -1084,6 +1171,14 @@ plant Plant::Squash(IPlayer* player) {
         }
         if (flag)//种了足够多的寒冰射手
         {
+            if (turn >= 1100 && turn < 1500)
+                for (i = 0; i < 5; i++)
+                {
+                    if (LeftLines[i] == 0) continue;
+                    if (Plants[i][columns - 1] == 0 || Plants[i][columns - 1] == 4)
+                        Util::SetPlant(&Boss, i, columns - 1, 500, 6);
+                }
+
             for (i = 0; i < 5; i++)
             {
                 if (LeftLines[i] == 0) continue;
@@ -1098,6 +1193,11 @@ plant Plant::Squash(IPlayer* player) {
 }
 void Plant::RemovePeaShooter(IPlayer* player, plant pt) {
     int** Plants = player->Camp->getCurrentPlants();
+    int*** Zombies = player->Camp->getCurrentZombies();
+    int* LeftLines = player->Camp->getLeftLines();
+    int Sun = player->Camp->getSun();
+    int turn = player->getTime();
+
     if (pt.type == 2 && Plants[pt.row][pt.col] != 2)
         player->removePlant(pt.row, pt.col);
     if (pt.type == 3 && Plants[pt.row][pt.col] == 4)
@@ -1395,6 +1495,7 @@ int ZombieUtil::getLeftLineNumZom(IPlayer *player) {
     return left;
 }
 int ZombieUtil::SledOrIron(int row, IPlayer *player) {
+    int turn = player->getTime();
     int** Plant = player->Camp->getCurrentPlants();
     int cols = player->Camp->getColumns();
     int Sun = player->Camp->getSun();
@@ -1403,7 +1504,7 @@ int ZombieUtil::SledOrIron(int row, IPlayer *player) {
     for(int i = cols-1; i >= cols-4; --i)
         if(Plant[row][i] != 0) isIron = false;
 
-    if(Sun > 1500) isIron = false;
+    if(Sun > 1500 || turn > 1400) isIron = false;
     if(isIron) return 2;
     else return 4;
 }
