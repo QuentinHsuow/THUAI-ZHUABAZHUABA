@@ -169,7 +169,7 @@ namespace BattleField {
     *************************************************************************/
     bool isManyZombies(int num, int row, IPlayer* player);
 
-    int* SquashFrontArray(IPlayer* player);
+    bool* SquashFrontArray(IPlayer* player);
 }
 
 
@@ -404,7 +404,7 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
     int* LeftLines = player->Camp->getLeftLines();
     int Sun = player->Camp->getSun();
 
-    if(LeftLines[row] == 0 || row < 0 || row > 4) return 0;
+    if(row < 0 || row > 4 || LeftLines[row] == 0) return 0;
 
     int sum = 0;
     int planttmp[3][11] = { 0 };//临时存储植物的数量和列数，第一个元素代表个数，后面的代表种植该植物的列数
@@ -513,8 +513,9 @@ int BattleField::DenseOfZombie(IPlayer* player, int row, int col) {
 
     int*** Zombies = player->Camp->getCurrentZombies();
     int* LeftLines = player->Camp->getLeftLines();
+    int cols = player->Camp->getColumns();
 
-    if (LeftLines[row] == 0) return 0;
+    if (col >= cols || col < 0 || row < 0 || row > 4 || LeftLines[row] == 0) return 0;
 
     int sum = 0;
     int k = 0;
@@ -632,7 +633,11 @@ bool BattleField::isFullForce(IPlayer* player)
     for (int i = 0; i < 5; ++i)
     {
         if (LeftLines[i] == 0) continue;
-        if (arr[i] < 2) return false;
+        if (arr[i] < 2) {
+            delete[] arr;
+            arr = nullptr;
+            return false;
+        }
     }
     delete[] arr;
     arr = nullptr;
@@ -642,6 +647,7 @@ bool BattleField::isManyZombies(int num, int row, IPlayer* player)
 {
     int*** Zombies = player->Camp->getCurrentZombies();
     int cols = player->Camp->getColumns();
+    if(row < 0 || row > 4) return false;
     int count = 0;
     for (int j = 0; j < cols; j++)
     {
@@ -653,9 +659,18 @@ bool BattleField::isManyZombies(int num, int row, IPlayer* player)
     }
     return false;
 }
-/*int *BattleField::SquashFrontArray(IPlayer *player) {
-    int** Plants = player->Camp->
-}*/
+bool *BattleField::SquashFrontArray(IPlayer *player) {
+    int* LeftLines = player->Camp->getLeftLines();
+    int** Plants = player->Camp->getCurrentPlants();
+    int cols = player->Camp->getColumns();
+    bool* squash_arr = new bool[5];
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0) { squash_arr[i] = false; continue;}
+        if(Plants[i][cols-1] == 6 || (Plants[i][cols-2] == 6 && Plants[i][cols-1] != 4)) squash_arr[i] = true;
+        else squash_arr[i] = false;
+    }
+    return squash_arr;
+}
 void Util::SetPlant(plant* Plant, int i, int j, int pri, int type)
 {
     Plant->row = i;
@@ -1328,9 +1343,29 @@ int ZombieUtil::BestDistribution(IPlayer *player) {
 
     return row;
 }
-/*int ZombieUtil::BestWave(IPlayer *player) {
+int ZombieUtil::BestWave(IPlayer *player) {
+
     int* StrongerArr = ForceCompare::StrongerArray(player);
-}*/
+    bool* SquashArr = BattleField::SquashFrontArray(player);
+    int* LeftLines = player->Camp->getLeftLines();
+    int row = -1;
+    int min = 100000;
+    for(int i = 0; i < 5; ++i){
+        if(LeftLines[i] == 0 || SquashArr[i]) continue;
+        else if(row == -1 || (row != -1 && StrongerArr[i] < min)){
+            row = i;
+            min = StrongerArr[i];
+        }
+    }
+    if(row == -1) row = ForceCompare::WeakestRow(player);
+
+    delete[] StrongerArr;
+    delete[] SquashArr;
+    SquashArr = nullptr;
+    SquashArr = nullptr;
+
+    return row;
+}
 int ZombieUtil::AvoidSquash(IPlayer* player){
     bool* SquashArr = BattleField::SquashFirstArray(player);
     int* LeftLines = player->Camp->getLeftLines();
@@ -1422,7 +1457,7 @@ zombie Zombie::Wait(IPlayer *player) {
 }
 zombie Zombie::ZombieWave2(IPlayer *player) {
     int Sun = player->Camp->getSun();
-    int row = ForceCompare::WeakestRow(player);
+    int row = ZombieUtil::BestWave(player);
     int disRow = ZombieUtil::BestDistribution(player);
     int turn = player->getTime();
 
@@ -1436,7 +1471,7 @@ zombie Zombie::ZombieWave2(IPlayer *player) {
 }
 zombie Zombie::ZombieWave3(IPlayer *player) {
     int Sun = player->Camp->getSun();
-    int row = ForceCompare::WeakestRow(player);
+    int row = ZombieUtil::BestWave(player);
     int turn = player->getTime();
 
     if (turn % 500 == 480) return{ 5, row };
