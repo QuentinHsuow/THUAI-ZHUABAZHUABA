@@ -457,6 +457,7 @@ int ForceCompare::ForceCalculation(int row, bool isZombie, IPlayer* player)
         for (int i = 1; i <= planttmp[0][0]; i++)
             sum += (10 - planttmp[0][i]) * 20 * 5;
         if (planttmp[0][0] != 0) sum *= 2;//如果存在寒冰射手，可以近似认为，植物的能力翻倍了！
+        if(turn > 1000) sum /= turn / 1000;
     }
     return sum;
 }
@@ -484,6 +485,7 @@ int ForceCompare::WeakestRow(IPlayer* player) {
             }
         }
     }
+    delete[] stronger_arr;
     return row;
 }
 bool ForceCompare::isPlantStronger(IPlayer* player) {
@@ -572,6 +574,8 @@ bool* BattleField::SquashFirstArray(IPlayer* player){
         if((Plants[i][cols-1] == 6 || (Plants[i][cols-2] == 6 && Plants[i][cols-1] == 0)) && (SArr[i] != 0 || GArr[i] != 0)) arr[i] = true;
         else arr[i] = false;
     }
+    delete[] GArr;
+    delete[] SArr;
     return arr;
 }
 int BattleField::WhereZombieType(int type, IPlayer *player) {
@@ -609,6 +613,7 @@ bool BattleField::isFullForce(IPlayer* player)
         if (LeftLines[i] == 0) continue;
         if (arr[i] < 2) return false;
     }
+    delete[] arr;
     return true;
 }
 bool BattleField::isManyZombies(int num, int row, IPlayer* player)
@@ -770,7 +775,7 @@ plant Plant::WinterPeaShooter(IPlayer* player) {
                     p = 550;
                 }
             }
-        if( Sun > 4000 )
+        if( Sun > 5000 )
             for (int i = 4; i >= 0; --i)
             {
                 if (LeftLines[i] == 0) continue;
@@ -1053,6 +1058,8 @@ bool ZombieStage::isStageOne(IPlayer *player) {
         if(LeftLines[i] == 0) continue;
         if(NumPea[i] != 0 || NumWinter[i] != 0) greater++;
     }
+    delete[] NumPea;
+    delete[] NumWinter;
     return greater >= LeftLineNumber;
 }
 bool ZombieStage::isStageTwo(IPlayer *player) {
@@ -1064,6 +1071,8 @@ bool ZombieStage::isStageTwo(IPlayer *player) {
     int greater = 0;
     for(int i = 0; i < 5; ++i)
         if(NumWinter[i] >= 1 || NumPea[i] >= 2) greater++;
+    delete[] NumPea;
+    delete[] NumWinter;
     return greater >= LeftLineNumber-1;
 }
 bool ZombieStage::isStageThree(IPlayer* player){
@@ -1211,6 +1220,8 @@ int ZombieUtil::StartBestPositionPole(IPlayer* player){
     delete[] PeaNum;
     delete[] IronNum;
     delete[] NutNum;
+    delete[] NorNum;
+    delete[] SunFlowerNum;
 
     return row;
 }
@@ -1253,6 +1264,7 @@ int ZombieUtil::AvoidSquash(IPlayer* player){
             row = i;
         }
     }
+    delete[] StrArr;
     return row;
 }
 int ZombieUtil::getLeftLineNumZom(IPlayer *player) {
@@ -1376,6 +1388,7 @@ zombie Zombie::NextWave(IPlayer *player) {
 
     delete[] PeaNum;
     delete[] WinterNum;
+    delete[] IronNum;
 
     int WRow = ForceCompare::WeakestRow(player);
     if ((WhereG != -1 || row != -1 || WhereS != -1 || turn > 1550) && Sun > 300 && WRow != -1) {
